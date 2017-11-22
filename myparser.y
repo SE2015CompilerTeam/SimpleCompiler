@@ -1,4 +1,5 @@
 %{
+#pragma warning( disable : 4996)
 #include <fstream>
 #include "mylexer.h"
 #include "driver.h"
@@ -260,6 +261,8 @@ int main(void)
     int n = 1;
     mylexer lexer;
     myparser parser;
+    //freopen("d:\\read.txt", "r", stdin);
+    //freopen("d:\\out.txt", "w", stdout);
     if (parser.yycreate(&lexer)) {
         if (lexer.yycreate(&parser)) {
             n = parser.yyparse();
