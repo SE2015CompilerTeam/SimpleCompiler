@@ -59,6 +59,7 @@ kexue    ({integer}|{double})[e]{integer}
 %}
 
 // place your Lex rules here
+"main"      {return MAIN;}
 "if"        {return IF;}
 
 "else"        {return ELSE;}
@@ -86,14 +87,15 @@ kexue    ({integer}|{double})[e]{integer}
 "class"|"struct"                        {return CLASS;}
 "public"|"private"|"protected"          {return ACCESS_CONTROL;}
 "const"|"static"                        {return FUNC_PRE;}                     
-"int"           {return INT;}
-"double"        {return DOUBLE;}
-"char"          {return CHAR;}    
-"float"         {return FLOAT;}
-"bool"          {return BOOL;}
-"void"          {return VOID;}                                
-"read"          {return READ;}
-"write"         {return WRITE;}
+"int"           {yylval.type_n = new TypeNode(); return INT;}
+"double"        {yylval.type_n = new TypeNode(Value_Type::type_double);return DOUBLE;}
+"char"          {yylval.type_n = new TypeNode(Value_Type::type_char);return CHAR;}    
+"float"         {yylval.type_n = new TypeNode(Value_Type::type_double);return FLOAT;}
+"bool"          {yylval.type_n = new TypeNode();return BOOL;}
+"void"          {yylval.type_n = new TypeNode(Value_Type::type_void);return VOID;} 
+                               
+"read"          {yylval.nodes = new Node("read");return READ;}
+"write"         {yylval.nodes = new Node("write");return WRITE;}
 "++"       {return PP;}
 "--"       {return MM;}
 "->"       {return RA;}
@@ -144,19 +146,19 @@ kexue    ({integer}|{double})[e]{integer}
                 return CHR;
            }
 {integer}   {yylval.int_n = new IntNode(atoi(yytext));return INTEGER;}
-{double}    {yylval.double_n = new DoubleNode(yytext);return DBL;}
-"NULL"          {return NUL;}
+{double}    {yylval.double_n = new DoubleNode(atof(yytext));return DBL;}
+"NULL"          {yylval.str = new StringNode("NULL");return NUL;}
 "true"          {yylval.int_n = new IntNode(1); return TRUE;}
 "false"         {yylval.int_n = new IntNode(0); return FALSE;}
 {cmp}       {
                 char name[LEN];
                 strcpy(name, yytext);
-                yylval.nodes = new Node(name , node_opt);
+                yylval.name = name;
                 return CMP;
             }
 
 {id}        {
-                char name[LEN];
+                char *name = new char[LEN];
                 strcpy(name, yytext);
                 yylval.id_n = new IDNode(name);
                 return ID;
@@ -164,7 +166,7 @@ kexue    ({integer}|{double})[e]{integer}
 
 {space}     {}
 
-{kexue}     {}
+{kexue}     {yylval.double_n = new DoubleNode(atof(yytext));return DBL;}
 %%
 
 /////////////////////////////////////////////////////////////////////////////

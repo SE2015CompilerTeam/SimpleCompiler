@@ -1,14 +1,5 @@
 #include "driver.h"
 using namespace std;
-//using namespace lexsp;
-/*
-char* strcpy(char* name){
-	char *c = (char*)malloc(sizeof(name));
-	for (int i = 0; i<sizeof(name); i++){
-		c[i] = name[i];
-	}
-	return c;
-}*/
 
 Node* Node::createNode(int num, Node* nodes[]){
 	Node* root = NULL;
@@ -19,6 +10,23 @@ Node* Node::createNode(int num, Node* nodes[]){
 			root->addChildren(nodes[i]);
 		}
 	}
+	return root;
+}
+Node* Node::createNode(int num, ...){
+	va_list argp;
+	Node* node = NULL;
+	Node* root = NULL;
+	va_start(argp, num);
+	for (int i = 0; i < num; i++){
+		node = va_arg(argp, Node*);
+		if (node == NULL) continue;
+		if (i == 0)
+			root = node;
+		else{
+			root->addChildren(node);
+		}
+	}
+	va_end(argp);
 	return root;
 }
 
@@ -40,7 +48,10 @@ void Node::addChildren(Node *child){
 		children = new Node();
 	this->children->addBrother(child);
 }
-
+void A(Node *node){
+	if (node->getNodeType() == Node_Type::node_value){
+	}
+}
 void SymbolMap::insert(string name, Symbol* sym){
 	this->Map.insert(pair<string, Symbol>(name, *sym));
 }
