@@ -31,6 +31,7 @@ public:
 	static Node* createNode(int num, Node* nodes[]); // 给出一个家族
 	static Node* createNode(Node* root, Node* node); // 直接给出父子俩
 	static Node* createNode(int num, ...);
+	static void printNode(Node* node);
 	void addChildren(Node* child);
 	void addBrother(Node *brother);
 	bool isLeaf(){ return children == nullptr; }
@@ -57,13 +58,28 @@ public:
 		this->value_type = type;
 	}
 	Value_Type getValueType(){ return this->value_type; }
+	static void printNode(Node* n);
 };
+class ExprNode : public Node{
+public:
+	ExprNode(char* name, Node* opt1, Node* opt2 = NULL){ // 表达式运算符 操作数1 操作数2（optional）
+		this->name = name;
+	}
+	void setNegative(){ // 因为取负不需要创建新节点
+		// 检测类型是否可以设为负
+	}
+	void setNot(){}
+	void autoIncre(int type = 0){ // 0: ++a 1: --a 2: a++ 3: a--
+	}
+};
+
 class DoubleNode : public ValueNode{
 public:
 	double value;
 	DoubleNode(double value) :ValueNode(Value_Type::type_double) { // 只有double类型需要再将字符串转为浮点数
 		this->value = value;
 	}
+	
 };
 class StringNode : public ValueNode{
 public:
@@ -90,41 +106,51 @@ public:
 	}
 };
 class TypeNode : public Node{
-	Value_Type type;
+	Value_Type type_type;
 public:
 	TypeNode(Value_Type type = Value_Type::type_int): Node("Type", Node_Type::node_type){
-		this->type = type;
+		this->type_type = type;
 	}
+	static void printNode(Node* node);
 };
 class IDNode : public ValueNode{
-	// bool isFunc = false;
+	bool isFunc = false;
+	ValueNode *value;
 public:
 	IDNode(char* name, Value_Type type = Value_Type::type_int): ValueNode(type){
 		this->name = name;
+		this->value = NULL;
 	}
 	IDNode(char  name, Value_Type type = Value_Type::type_int): ValueNode(type){
 		char *c = new char[2];
 		c[0] = name; c[1] = '\0';
 		this->name = c;
+		this->value = NULL;
 	}
+	void setValue(ValueNode* n){
+		if (this->value != NULL)
+			delete this->value;
+		this->value = n;
+	}
+	static void printNode(Node* n);
 };
 
-class Symbol {
+/*class Symbol {
 	int linenum;
 	std::string name;
 	Value_Type type;
 	void* data;
-};
+};*/
 class SymbolMap{
 public:
-	Symbol* find(std::string name);
-	void insert(std::string name, Symbol* symbol);
+	IDNode* find(std::string name);
+	void insert(std::string name, IDNode* symbol);
 private:
-	std::map<std::string, Symbol> Map;
+	std::map<std::string, IDNode> Map;
 };
 class SymbolTable{
 public:
-	Symbol* find(std::string name);
+	IDNode* find(std::string name);
 	void push(SymbolMap& map){
 		MapStack.push_back(map);
 	}
