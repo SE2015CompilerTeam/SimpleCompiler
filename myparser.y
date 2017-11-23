@@ -160,15 +160,15 @@ expr    : '(' expr ')' { $$ = $2; printf("(expr)\n");}
         | expr OR expr  {$$ = Node::createNode(3,new Node("||", Node_Type::node_opt), $1, $3); }
         | expr AND expr {$$ = Node::createNode(3,new Node("&&", Node_Type::node_opt), $1, $3); }
         | expr '=' expr {$$ = Node::createNode(3,new Node("=", Node_Type::node_opt), $1, $3);printf("expr = expr\n");  }
-        | PP expr  %prec '!' {$$ = Node::createNode(new Node("+++", Node_Type::node_opt), $2);printf("PP expr\n");}
-        | MM expr  %prec '!' {$$ = Node::createNode(new Node("---", Node_Type::node_opt), $2);}
+        | PP expr  %prec '!' {$$ = $2;}
+        | MM expr  %prec '!' {$$ = $2;}
         | '-' expr %prec '!' {$$ = $2;}
         | expr PP  %prec '*' {
                                 $$ = Node::createNode(new Node("++", Node_Type::node_opt), $1);
                                 printf("expr PP\n");
                              }
         | expr MM  %prec '*' {$$ = Node::createNode(new Node("--", Node_Type::node_opt), $1);}
-        | '!' expr {$$ = Node::createNode(new Node("!", Node_Type::node_opt), $2);}
+        | '!' expr {$$ = $2;} // TODO: temp..
         | '~' expr {$$ = Node::createNode(new Node("~", Node_Type::node_opt), $2);}
         | vals  {$$ = Node::createNode(new Node("expr"), $1);}
         | var {$$ = Node::createNode(new Node("expr"), $1);printf("expr ID \n");}
