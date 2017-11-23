@@ -11,7 +11,7 @@ enum Node_Type { node_norm, node_value, node_id, node_opt, node_type };
 enum Value_Type   { type_int, type_char, type_double, type_string, type_void };
 class Node{ // 节点基类
 protected:
-	Node *children = nullptr;
+	Node *children = nullptr; // 左孩子右兄弟
 	Node *brother = nullptr;
 	Node_Type type;
 public:
@@ -32,8 +32,11 @@ public:
 	static Node* createNode(Node* root, Node* node); // 直接给出父子俩
 	static Node* createNode(int num, ...);
 	static void printNode(Node* node);
+	static void printTree(Node *tree, int level);
 	void addChildren(Node* child);
 	void addBrother(Node *brother);
+	Node* getBrother(){ return this->brother; }
+	Node* getChildren(){ return this->children; }
 	bool isLeaf(){ return children == nullptr; }
 	Node_Type getNodeType(){ return this->type; }
 };

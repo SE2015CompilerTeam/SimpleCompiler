@@ -78,8 +78,8 @@ Node* node;
 
 %start program
 %%
-program : types MAIN '(' ')' stmts {} // TODO: main args
-        | stmts {}
+program : types MAIN '(' ')' block {Node::printTree($5, 0);printf("main\n");} // TODO: main args
+        //| stmts {Node::printTree($1, 0);}
         ;
 types: INT  {$$ = $1; printf("types INT\n"); }
      | DOUBLE   {$$ = $1;}
@@ -200,6 +200,8 @@ var     : ID { $$ = $1;  printf("var ID %s\n", $1->name); }
         | '(' var ')' { $$ = $2; }
         ;
 def_stmt: types ids  { 
+                        //Node *nodes[] = {new Node("Def_Stmt"), $1, $2};
+                        //$$ = Node::createNode(new Node("Def_Stmt"), new Node("TEST"));
                         $$ = Node::createNode(3, new Node("Def_Stmt"), $1, $2);
                         printf("def_stmt types ids\n");
                      }

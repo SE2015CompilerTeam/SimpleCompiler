@@ -1,9 +1,6 @@
 #include "driver.h"
 using namespace std;
 
-void walkTree(Node* node, int level){
-
-}
 
 void checkNodeType(Node* n, Node_Type type){
 	if (n->getNodeType() != type)
@@ -46,16 +43,16 @@ Node* Node::createNode(Node* root, Node* node){
 
 void Node::addBrother(Node *bro){
 	Node *cur = this;
-	while (cur->brother)
+	while (cur->brother != NULL)
 		cur = cur->brother;
-	Node *b = new Node(*bro);
-	cur->brother = b;
+	cur->brother = bro;
 }
 
 void Node::addChildren(Node *child){
-	if (!children)
-		children = new Node();
-	this->children->addBrother(child);
+	if (this->children == NULL)
+		this->children = child;
+	else
+		this->children->addBrother(child);
 }
 void SymbolMap::insert(string name, IDNode* sym){
 	this->Map.insert(pair<string, IDNode>(name, *sym));
@@ -82,6 +79,7 @@ void Node::printNode(Node *n){
 	switch (n->type)
 	{
 	case Node_Type::node_id:
+		IDNode::printNode(n);
 		break;
 	case Node_Type::node_value:
 		ValueNode::printNode(n);
@@ -108,16 +106,16 @@ void ValueNode::printNode(Node* n){
 	switch (node->value_type)
 	{
 	case Value_Type::type_char:
-		printf("Value %c\n", ((CharNode*)node)->value);
+		printf("Value    %c\n", ((CharNode*)node)->value);
 		break;
 	case Value_Type::type_int:
-		printf("Value %d\n", ((IntNode*)node)->value);
+		printf("Value    %d\n", ((IntNode*)node)->value);
 		break;
 	case Value_Type::type_double:
-		printf("Value %f\n", ((DoubleNode*)node)->value);
+		printf("Value    %f\n", ((DoubleNode*)node)->value);
 		break;
 	case Value_Type::type_string:
-		printf("Value %s\n", ((StringNode*)node)->value);
+		printf("Value    %s\n", ((StringNode*)node)->value);
 		break;
 	default:
 		break;
@@ -126,7 +124,7 @@ void ValueNode::printNode(Node* n){
 void IDNode::printNode(Node* n){
 	try{
 		checkNodeType(n, Node_Type::node_id);
-		printf("VAR %s", n->name);
+		printf("VAR    %s", n->name);
 	}
 	catch (exception e){
 		printf(e.what());
@@ -140,25 +138,39 @@ void TypeNode::printNode(Node *n){
 		switch (node->type_type)
 		{
 		case Value_Type::type_char:
-			c = "CHAR";
+			printf("TYPE    CHAR\n");
 			break;
 		case Value_Type::type_int:
-			c = "INT";
+			printf("TYPE    INT\n");
 			break;
 		case Value_Type::type_double:
-			c = "DOUBLE";
+			printf("TYPE    DOUBLE\n");
 			break;
 		case Value_Type::type_string:
-			c = "STRING";
+			printf("TYPE    STRING\n");
 			break;
 			//case "pointer & array":
 		default:
+			printf("TYPE    Un F**king known. Fuck Me..\n");
 			break;
 		}
-		printf("TYPE %s\n", c);
 	}
 	catch (exception e){
 		printf(e.what());
 	}
-	
+}
+void Node::printTree(Node* node, int level){
+	if (node == NULL)
+		return;
+	int a;
+	(a) = 3;
+	for (int i = 0; i < level; i++)
+		printf("    ");
+	Node::printNode(node);
+	Node *child = node->getChildren();
+	while (child != NULL)
+	{
+		Node::printTree(child, level + 1);
+		child = child->getBrother();
+	}
 }
