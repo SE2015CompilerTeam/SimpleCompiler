@@ -125,7 +125,7 @@ exprlist: exprlist ',' expritem {$$ = $1; $$->addChildren($3);printf("exprlist ,
 expritem: expr {$$ = $1; printf("expritem : expr\n");}
         | initlist { $$ = $1; }
         ;
-vals:     INTEGER   {$$ = $1; printf("vals INTEGER %d\n", $1->value);}
+vals:     INTEGER   {$$ = $1; printf("vals INTEGER %d name %s type %d\n", $1->value,$1->name, $1->getNodeType());}
         | DBL   {$$ = $1; printf("vals DBL %f\n", $1->value);}
         | CHR   {$$ = $1;printf("vals CHR %c\n", $1->value);}
         | STR   {$$ = $1;}
@@ -136,7 +136,9 @@ vals:     INTEGER   {$$ = $1; printf("vals INTEGER %d\n", $1->value);}
 /*func_def_stmt: types ID '(' def_stmt ')' block   {printf("func_def\n");}
         ;*/
 expr    : '(' expr ')' { $$ = $2; printf("(expr)\n");}
-        | expr PA  expr {$$ = Node::createNode(3,new Node("+=", Node_Type::node_opt), $1, $3);}
+        | expr PA  expr {
+                            $$ = Node::createNode(3,new Node("+=", Node_Type::node_opt), $1, $3);
+                            }
         | expr MNA expr {$$ = Node::createNode(3,new Node("-=", Node_Type::node_opt), $1, $3);}
         | expr MA  expr {$$ = Node::createNode(3,new Node("*=", Node_Type::node_opt), $1, $3);}
         | expr DA  expr {$$ = Node::createNode(3,new Node("/=", Node_Type::node_opt), $1, $3);}
@@ -154,12 +156,12 @@ expr    : '(' expr ')' { $$ = $2; printf("(expr)\n");}
         | expr '|' expr {$$ = Node::createNode(3,new Node("|", Node_Type::node_opt), $1, $3);}
         | expr '^' expr {$$ = Node::createNode(3,new Node("^", Node_Type::node_opt), $1, $3); }
         | expr '&' expr {$$ = Node::createNode(3,new Node("&", Node_Type::node_opt), $1, $3); }
-        | expr EQ expr  {$$ = Node::createNode(3,new Node("==", Node_Type::node_opt), $1, $3); printf("expr == expr\n"); }
+        | expr EQ expr  {$$ = Node::createNode(3,new Node("==", Node_Type::node_opt), $1, $3);}
         | expr NEQ expr {$$ = Node::createNode(3,new Node("!=", Node_Type::node_opt), $1, $3); }
         | expr CMP expr {$$ = Node::createNode(3,new Node($2, Node_Type::node_opt), $1, $3); }
         | expr OR expr  {$$ = Node::createNode(3,new Node("||", Node_Type::node_opt), $1, $3); }
         | expr AND expr {$$ = Node::createNode(3,new Node("&&", Node_Type::node_opt), $1, $3); }
-        | expr '=' expr {$$ = Node::createNode(3,new Node("=", Node_Type::node_opt), $1, $3);printf("expr = expr\n");  }
+        | expr '=' expr {$$ = Node::createNode(3,new Node("=", Node_Type::node_opt), $1, $3);}
         | PP expr  %prec '!' {$$ = $2;}
         | MM expr  %prec '!' {$$ = $2;}
         | '-' expr %prec '!' {$$ = $2;}
@@ -170,8 +172,8 @@ expr    : '(' expr ')' { $$ = $2; printf("(expr)\n");}
         | expr MM  %prec '*' {$$ = Node::createNode(new Node("--", Node_Type::node_opt), $1);}
         | '!' expr {$$ = $2;} // TODO: temp..
         | '~' expr {$$ = Node::createNode(new Node("~", Node_Type::node_opt), $2);}
-        | vals  {$$ = Node::createNode(new Node("expr"), $1);}
-        | var {$$ = Node::createNode(new Node("expr"), $1);printf("expr ID \n");}
+        | vals  {$$ = $1;}
+        | var {$$ = $1;printf("expr ID \n");}
         //| {}
         //| MUL expr %prec UDEREF { }
         //| BITAND expr %prec UREF { }
@@ -183,12 +185,14 @@ ids     : varexpr {
                 }
         | ids ',' varexpr {$$ = $1; $$->addChildren($3);  printf("ids , varexpr\n");}
         ;
-varexpr : var { $$ = Node::createNode(new Node("varexpr"), $1);printf("varexpr var\n");}
-        | var '=' expr { 
+varexpr : var { $$ = $1;printf("varexpr var\n");}
+        | var '=' expr { /*可能是IDNode或ExprNode*/
+                            // 这里IDNode 直接SetValue 无需再创建新节点
                             $$ = Node::createNode(new Node("varexpr"), Node::createNode(3, new Node("=", Node_Type::node_opt),$1, $3)); 
                             printf("varexpr: var = expr\n");
                         }
         | var '=' initlist {
+                            // SetValue
                             $$ = Node::createNode(new Node("varexpr"), Node::createNode(3, new Node("=", Node_Type::node_opt),$1, $3));
                             printf("varexpr: var = initlist\n");
                         }

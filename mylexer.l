@@ -160,8 +160,7 @@ kexue    ({integer}|{double})[e]{integer}
 {id}        {
                 char *name = new char[LEN];
                 strcpy(name, yytext);
-                yylval.id_n = new IDNode(name);
-                yylval.id_n->setValue(new ValueNode());
+                yylval.id_n = new IDNode(name, Value_Type::type_int, yylineno);
                 return ID;
             }
 

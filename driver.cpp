@@ -6,7 +6,6 @@ void checkNodeType(Node* n, Node_Type type){
 	if (n->getNodeType() != type)
 		throw new exception("节点类型不匹配（Node => %d）", type);
 }
-
 Node* Node::createNode(int num, Node* nodes[]){
 	Node* root = NULL;
 	if (num > 0 && nodes[0] != NULL){
@@ -124,7 +123,7 @@ void ValueNode::printNode(Node* n){
 void IDNode::printNode(Node* n){
 	try{
 		checkNodeType(n, Node_Type::node_id);
-		printf("VAR    %s", n->name);
+		printf("VAR    %s\n", n->name);
 	}
 	catch (exception e){
 		printf(e.what());
@@ -173,4 +172,25 @@ void Node::printTree(Node* node, int level){
 		Node::printTree(child, level + 1);
 		child = child->getBrother();
 	}
+}
+
+char* ExprNode::calculate(const char* name, ValueNode* n1, ValueNode* n2 = nullptr) {
+	/*char* c = new char[LEN];
+	if (n2 == nullptr){
+		// 单目运算符
+	}
+	else{
+		int type = n1->getValueType() & n2->getValueType(); // 两个操作数的话 不在乎谁是左值
+		if (name == "*"){
+			// 列出所有支持乘法的类型 
+			if (type == Value_Type::type_int & Value_Type::type_int
+				|| type == Value_Type::type_int & Value_Type::type_char){
+				itoa(atoi(n1->getValue().c_str()) * atoi(n2->getValue().c_str()), c, 10);
+				return c;
+			}
+			//else if (type == )
+		}
+		return "test value";
+	}*/
+	return "test value";
 }
