@@ -81,12 +81,12 @@ Node* node;
 program : types MAIN '(' ')' block {Node::printTree($5, 0);printf("main\n");} // TODO: main args
         //| stmts {Node::printTree($1, 0);}
         ;
-types: INT  {$$ = $1; printf("types INT\n"); }
-     | DOUBLE   {$$ = $1;}
-     | FLOAT    {$$ = $1;}
-     | CHAR {$$ = $1;}
-     | VOID {$$ = $1;}
-     | BOOL {$$ = $1;}
+types: INT  {$$ = $1; printf("types INT\n"); setTypes(Value_Type::type_int);}
+     | DOUBLE   {$$ = $1; setTypes(Value_Type::type_double);}
+     | FLOAT    {$$ = $1; setTypes(Value_Type::type_double);}
+     | CHAR {$$ = $1; setTypes(Value_Type::type_char);}
+     | VOID {$$ = $1; setTypes(Value_Type::type_void);}
+     | BOOL {$$ = $1; setTypes(Value_Type::type_bool);}
      //| types '*' { }
      ;
 /*
