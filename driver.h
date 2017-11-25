@@ -9,8 +9,8 @@
 
 #define LEN 1024
 
-enum Node_Type { node_norm, node_value, node_id, node_opt, node_type };
-enum Value_Type { type_int = 10, type_char, type_double, type_string/* char* */, type_void, type_bool };
+enum Node_Type { node_norm, node_value, node_id, node_opt, node_type, node_array };
+enum Value_Type { type_int = 10, type_char, type_double, type_string/* char* */, type_void, type_bool , type_array};
 //vector<
 
 //map<Value_Type, ValueVec*> TypeMap;
@@ -58,15 +58,15 @@ public:
 		this->value = "";
 	}
 
-	ValueNode(Value_Type value_type) :Node("Value", Node_Type::node_value) {
+	ValueNode(Value_Type value_type, Node_Type node_type = Node_Type::node_value) :Node("Value", node_type) {
 		this->value_type = value_type;
 		this->value = "";
 	}
-	ValueNode(char* name, Value_Type value_type) :Node(name, Node_Type::node_value) {
+	ValueNode(char* name, Value_Type value_type, Node_Type node_type = Node_Type::node_value) :Node(name, node_type) {
 		this->value_type = value_type;
 		this->value = "";
 	}
-	ValueNode(char name, Value_Type value_type) :Node(name, Node_Type::node_value) {
+	ValueNode(char name, Value_Type value_type, Node_Type node_type = Node_Type::node_value) :Node(name, node_type) {
 		this->value_type = value_type;
 		this->value = "";
 	}
@@ -154,6 +154,25 @@ public:
 	void setNot();
 	void autoIncre(int type = 0); // 0: ++a 1: --a 2: a++ 3: a--
 	static char* calculate(const char* name, ValueNode* n1, ValueNode* n2);
+};
+
+class ArrayNode : public ValueNode {
+private:
+	int dimension; //用于记录有多少维度
+	int count; //用于迭代记录当前维度有多大
+	std::vector<int> size; //用于记录每一维有多大
+public:
+	int getDimension();
+	void setDimension(int i);
+	std::vector<int> getSize(); 
+	void addSize(int tmp); //添加提升维度时把维度的大小添加进去
+	void addCount(); //当前维度空间加一
+	static void printNode(Node* n);
+	Node* getChild(int i); //获取当前数组的第i个元素，从0开始计
+	ArrayNode(int tmpCount = 1) : ValueNode(Value_Type::type_array, Node_Type::node_array) {
+		this->count = tmpCount;
+		this->dimension = dimension;
+	}
 };
 
 class SymbolMap {

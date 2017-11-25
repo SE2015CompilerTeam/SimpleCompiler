@@ -1,4 +1,5 @@
 #include "driver.h"
+#include <iostream>
 using namespace std;
 
 
@@ -98,6 +99,9 @@ void Node::printNode(Node *n) {
 	case Node_Type::node_type:
 		TypeNode::printNode(n);
 		break;
+	case Node_Type::node_array:
+		ArrayNode::printNode(n);
+		break;
 	case Node_Type::node_opt:
 		printf("OPT    %s\n", n->name);
 		break;
@@ -143,6 +147,33 @@ void IDNode::printNode(Node* n) {
 	}
 }
 
+void ArrayNode::printNode(Node* n) {
+	try {
+		if (n = nullptr) { //如果当前是空结点就不打印
+			return;
+		}
+		checkNodeType(n, Node_Type::node_array); //这个地方如果最后不是arraynode会误报不匹配
+		ValueNode* nodeTmp = (ValueNode*)n;
+		ArrayNode* node = (ArrayNode*)nodeTmp; //转换成ArrayNode才能获取维数和每维空间大小
+		cout << "ARRAY    " << node->getDimension << "  ";//打印维数
+		vector<int> vector = node->getSize();
+		for (int i = 0; vector.size(); i++) {//打印每维空间大小
+			cout << vector[i] << "  ";
+		}
+		Node* child = node->getChildren(); //获取子节点
+		while (child != nullptr) {
+			Node::printNode(child);
+			child = child->getBrother(); //获取兄弟结点
+		}
+		
+		//打印维度+每维空间大小
+	}
+	catch (exception e) {
+		printf(e.what());
+	}
+}
+
+
 void TypeNode::printNode(Node *n) {
 	try {
 		char* c = "Unknown, maybe is array or pointer..fuck me..";
@@ -162,6 +193,9 @@ void TypeNode::printNode(Node *n) {
 			printf("TYPE    STRING\n");
 			break;
 			//case "pointer & array":
+		case Value_Type::type_array:
+			printf("TYPE    ARRAY\n");
+			break;
 		default:
 			printf("TYPE    Un F**king known. Fuck Me..\n");
 			break;
@@ -175,8 +209,6 @@ void TypeNode::printNode(Node *n) {
 void Node::printTree(Node* node, int level) {
 	if (node == NULL)
 		return;
-	int a;
-	(a) = 3;
 	for (int i = 0; i < level; i++)
 		printf("    ");
 	Node::printNode(node);
@@ -250,5 +282,49 @@ bool isRedefined(IDNode* node) {
 	}
 	else {
 		return true;
+	}
+}
+
+int ArrayNode::getDimension() {
+	return this->dimension;
+}
+
+void ArrayNode::setDimension(int i) {
+	this->dimension = i;
+}
+
+vector<int> ArrayNode::getSize() {
+	return this->size;
+}
+
+void ArrayNode::addSize(int tmp) {
+	this->size.insert(size.begin(), tmp);
+}
+
+void ArrayNode::addCount() {
+	this->count += 1;
+}
+
+Node* ArrayNode::getChild(int i) {
+	Node* child = this->getChildren();
+	if (child == nullptr) { //如果没有孩子结点
+		cout << "数组越界" << endl;
+		return nullptr;
+	}
+	else {
+		if (i == 0) { //如果返回下标为0
+			return child;
+		}
+		else {
+			for (int k = 0; k < i; i++) {
+				child = child->getBrother(); //获取兄弟结点
+				if (child == nullptr) {
+					cout << "数组越界" << endl;
+					return nullptr;
+					break;
+				}
+			}
+			return child;
+		}
 	}
 }

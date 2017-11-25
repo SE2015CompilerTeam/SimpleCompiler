@@ -119,8 +119,8 @@ stmt    : def_stmt ';'{$$ = $1;  printf("stmt def_stmt ;\n");}
 initlist: '{' exprlist '}' { $$ = Node::createNode(new Node("Initlist"), $2); printf("initlist {list}\n"); }
         | '{' exprlist ',' '}' {$$ = Node::createNode(new Node("Initlist"), $2);printf("initlist {list ,}\n");}
         ;
-exprlist: exprlist ',' expritem {$$ = $1; $$->addChildren($3);printf("exprlist , item\n"); }
-        | expritem {$$ = Node::createNode(new Node("exprlist"), $1);printf("exprlist item\n");}
+exprlist: exprlist ',' expritem {$$ = $1; $$->addChildren($3); $$->addCount(); printf("exprlist , item\n"); }
+        | expritem {$$ = new ArrayNode(); $$->addChildren($1);printf("exprlist item\n");}
         ;
 expritem: expr {$$ = $1; printf("expritem : expr\n");}
         | initlist { $$ = $1; }
