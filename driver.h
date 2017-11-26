@@ -10,8 +10,8 @@
 
 #define LEN 1024
 
-enum Node_Type { node_norm, node_value, node_id, node_opt, node_type,/* node_expr exprNode可由type_opt替代 */ };
-enum Value_Type   { type_int = 10, type_char, type_double,type_float, type_string/* char* */, type_void, type_pointer, type_array };
+enum Node_Type { node_norm, node_value, node_id, node_opt, node_type, };
+enum Value_Type   { type_int = 10, type_char, type_double, type_float, type_string, type_void, type_pointer, type_array };
 //vector<
 
 //map<Value_Type, ValueVec*> TypeMap;
@@ -19,8 +19,6 @@ class Node{ // 节点基类
 protected:
 	Node *children = nullptr; // 左孩子右兄弟
 	Node *brother = nullptr;
-	//Node *lastChild = nullptr;
-	//Node *lastBrother = nullptr;
 	Node_Type type;
 	char* name;
 public:
@@ -60,9 +58,9 @@ public:
 		this->value_type = Value_Type::type_int;
 	}
 
-	ValueNode(const char* value, Value_Type value_type= Value_Type::type_int) :Node("Value", Node_Type::node_value){
+	ValueNode(const char* value, Value_Type value_type = Value_Type::type_int) :Node("Value", Node_Type::node_value){
 		this->value_type = value_type;
-		this->value = new char[std::strlen(value)+1];
+		this->value = new char[std::strlen(value) + 1];
 		strcpy_s(this->value, std::strlen(value) + 1, value);
 	}
 	ValueNode(const char* value, char* name, Value_Type value_type = Value_Type::type_int) :Node(name, Node_Type::node_value){
@@ -91,7 +89,7 @@ class DoubleNode : public ValueNode{
 	double tvalue;
 public:
 	double getValue(){ return this->tvalue; }
-	DoubleNode(double val) :ValueNode(std::to_string(val).c_str() , Value_Type::type_double) { // 只有double类型需要再将字符串转为浮点数
+	DoubleNode(double val) :ValueNode(std::to_string(val).c_str(), Value_Type::type_double) { // 只有double类型需要再将字符串转为浮点数
 		this->tvalue = val;
 	}
 };
@@ -170,14 +168,12 @@ private:
 	ValueNode *tvalue = nullptr; // 保存表达式的值(根据type强制转化成各种类型)
 	//void calculate(ValueNode* n1, ValueNode* n2);
 public:
-	ExprNode(char* name, ValueNode* n1, ValueNode* n2 = nullptr):ValueNode(){ // 表达式运算符 操作数1 操作数2（optional）
+	ExprNode(char* name, ValueNode* n1, ValueNode* n2 = nullptr) :ValueNode(){ // 表达式运算符 操作数1 操作数2（optional）
 		this->name = name;
 		this->type = Node_Type::node_opt;
-		bool b = this->tvalue == nullptr;
 		setValue(ExprNode::calculate(name, n1, n2));
-		bool c = this->tvalue == nullptr;
 	}
-	ExprNode(ValueNode* n):ValueNode(*n){
+	ExprNode(ValueNode* n) :ValueNode(*n){
 		setValue(n);
 	}
 	ValueNode* getValue(){ return this->tvalue; }
@@ -187,6 +183,7 @@ public:
 	void autoIncre(int type = 0); // 0: ++a 1: --a 2: a++ 3: a--
 	static ValueNode* calculate(const char* name, ValueNode* n1, ValueNode* n2);
 	static ValueNode* calcSimpleOpt(const char* name, ValueNode* n1, ValueNode* n2); // 计算非组合运算符
+	static ValueNode* calcBoolOpt(const char* type, ValueNode* n1, ValueNode *n2);
 	static void printNode(Node* n);
 };
 

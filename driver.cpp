@@ -10,6 +10,7 @@ static const char* ErrorMSG[] = {
 	"只能计算非组合运算符",
 	"不支持的操作数类型",
 	"表达式必须是可修改的左值",
+	"表达式缺少左值",
 };
 
 bool isSimpleOpt(const char* name){
@@ -35,7 +36,7 @@ void ThrowERR(int index){ // 错误消息索引
 	//throw new exception(ErrorMSG[index]);
 	//yyerror(ErrorMSG[index]);
 	fprintf(stderr, ErrorMSG[index]);
-	fprintf(stderr,"\n");
+	fprintf(stderr, "\n");
 }
 void ThrowERR(char* msg){ // 错误消息索引
 	fprintf(stderr, msg);
@@ -95,7 +96,7 @@ void Node::addChildren(Node *child){
 	if (this->children == NULL){
 		this->children = child;
 	}
-		
+
 	else
 		this->children->addBrother(child);
 }
@@ -121,34 +122,35 @@ IDNode* SymbolTable::find(string name){
 }
 
 void Node::printNode(Node *n){
-	switch (n->type)
-	{
-	case Node_Type::node_id:
-		IDNode::printNode(n);
-		break;
-	case Node_Type::node_value:
-		ValueNode::printNode(n);
-		break;
-	case Node_Type::node_type:
-		TypeNode::printNode(n);
-		break;
-	case Node_Type::node_opt:
-		ExprNode::printNode(n);
-		break;
-	case Node_Type::node_norm:
-		cout << n->getName() << endl;
-		break;
-	default:
-		break;
+	if (n != nullptr){
+		switch (n->type)
+		{
+		case Node_Type::node_id:
+			IDNode::printNode(n);
+			break;
+		case Node_Type::node_value:
+			ValueNode::printNode(n);
+			break;
+		case Node_Type::node_type:
+			TypeNode::printNode(n);
+			break;
+		case Node_Type::node_opt:
+			ExprNode::printNode(n);
+			break;
+		case Node_Type::node_norm:
+			cout << n->getName() << endl;
+			break;
+		default:
+			break;
+		}
 	}
 }
 
 void ExprNode::printNode(Node* n){
-	if (checkNodeType(n, Node_Type::node_opt)){
+	if (n->getNodeType() == Node_Type::node_opt){
 		cout.setf(ios::left);
 		ExprNode *en = (ExprNode*)n;
-		cout << setw(PRTSPC) << "EXPR" << en->getName();
-		cout << setw(PRTSPC) << en->getValue()->getValue() << endl;
+		cout << setw(PRTSPC) << "EXPR" << en->getName()<<en->getValue()->getValue() << endl;
 	}
 }
 
@@ -223,13 +225,13 @@ void TypeNode::printNode(Node *n){
 	cout << setw(PRTSPC) << "TYPE";
 	switch (node->type_type)
 	{
-		case Value_Type::type_char:		cout << "CHAR"		<< endl;		break;
-		case Value_Type::type_int:		cout << "INT"		<< endl;		break;
-		case Value_Type::type_double:	cout << "DOUBLE"	<< endl;		break;
-		case Value_Type::type_float:	cout << "FLOAT"		<< endl;		break;
-		case Value_Type::type_string:	cout << "STRING"	<< endl;		break;
-		case Value_Type::type_pointer:	cout << "PINTER"	<< endl;		break;
-		default:	cout << "Un F**king known.Fuck Me.."	<< endl;		break;
+	case Value_Type::type_char:		cout << "CHAR" << endl;		break;
+	case Value_Type::type_int:		cout << "INT" << endl;		break;
+	case Value_Type::type_double:	cout << "DOUBLE" << endl;		break;
+	case Value_Type::type_float:	cout << "FLOAT" << endl;		break;
+	case Value_Type::type_string:	cout << "STRING" << endl;		break;
+	case Value_Type::type_pointer:	cout << "PINTER" << endl;		break;
+	default:	cout << "Un F**king known.Fuck Me.." << endl;		break;
 	}
 }
 void Node::printTree(Node* node, int level){
@@ -255,89 +257,104 @@ ValueNode* ValueNode::extractInterValue(ValueNode *n){
 	return res;
 }
 
-ValueNode* ExprNode::calcSimpleOpt(const char* name, ValueNode* node1, ValueNode* node2){ // TODO: 这类型组合肯定不全..
+ValueNode* ExprNode::calcBoolOpt(const char* type, ValueNode* node1, ValueNode* node2){
+	// >, <, ==, !=
+	if (node1 == nullptr || node2 == nullptr){
+		ThrowERR(3);
+		return nullptr;
+	}
+	ValueNode *n1 = ValueNode::extractInterValue(node1), *n2 = ValueNode::extractInterValue(node2);
+	double res1 = atof(n1->getValue()), res2 = atof(n2->getValue());
+	if (!strcmp(type, ">"))		return new IntNode(res1 > res2);
+	if (!strcmp(type, "<"))		return new IntNode(res1 < res2);
+	if (!strcmp(type, "=="))		return new IntNode(res1 == res2);
+	if (!strcmp(type, "!="))		return new IntNode(res1 != res2);
+	if (!strcmp(type, ">="))		return new IntNode(res1 >= res2);
+	if (!strcmp(type, "<="))		return new IntNode(res1 <= res2);
+	return nullptr;
+}
+
+ValueNode* ExprNode::calcSimpleOpt(const char* name, ValueNode* node1, ValueNode* node2){
 	if (!isSimpleOpt(name)){
 		return nullptr;
 	}
 	ValueNode *n1 = ValueNode::extractInterValue(node1), *n2 = ValueNode::extractInterValue(node2);
-	if (name == "=="){
-		// 有double就转double（double转到string时保留0）
-		if (n1->getValueType() == Value_Type::type_double || n1->getValueType() == Value_Type::type_float
-			|| n2->getValueType() == Value_Type::type_double || n2->getValueType() == Value_Type::type_float){
-			return new IntNode(atof(n1->getValue()) == atof(n1->getValue()));
-		}
-		return new IntNode(n1->getValue() == n2->getValue() );
-	}
 	if (false){ // TODO: 先判断是否有指针 或 数组
 	}
-	else if (n1->getValueType() == Value_Type::type_double
-		|| n2->getValueType() == Value_Type::type_double) // 任何表达式 只要含double 那结果就是 double
-	{
-		DoubleNode* dn = nullptr;
-		if		(name == "*")  dn = new DoubleNode(atof(n1->getValue()) * atof(n2->getValue()));
-		else if (name == "/")  dn = new DoubleNode(atof(n1->getValue()) / atof(n1->getValue()));
-		else if (name == "+")  dn = new DoubleNode(atof(n1->getValue()) + atof(n1->getValue()));
-		else if (name == "-")  dn = new DoubleNode(atof(n1->getValue()) - atof(n1->getValue()));
-		else if (name == "&&") dn = new DoubleNode(atof(n1->getValue()) && atof(n1->getValue()));
-		else if (name == "||") dn = new DoubleNode(atof(n1->getValue()) || atof(n1->getValue()));
-		else ThrowERR(1); // 不支持的操作数类型
-		return dn;
-	}
-	else if (n1->getValueType() == Value_Type::type_float
-		|| n2->getValueType() == Value_Type::type_float)
-	{
-		FloatNode* dn = nullptr;
-		if (name == "*")	  dn = new FloatNode(atof(n1->getValue()) * atof(n2->getValue()));
-		else if (name == "/") dn = new FloatNode(atof(n1->getValue()) / atof(n2->getValue()));
-		else if (name == "+") dn = new FloatNode(atof(n1->getValue()) + atof(n2->getValue()));
-		else if (name == "-") dn = new FloatNode(atof(n1->getValue()) - atof(n2->getValue()));
-		else if (name == "&&") dn = new FloatNode(atof(n1->getValue()) && atof(n1->getValue()));
-		else if (name == "||") dn = new FloatNode(atof(n1->getValue()) || atof(n1->getValue()));
-		else ThrowERR(1); // 不支持的操作数类型
-		return dn;
-	}
-	else if (n1->getValueType() == Value_Type::type_int
-		|| n2->getValueType() == Value_Type::type_int)
-	{
-		IntNode* dn = nullptr;
-		if (name == "*")	   dn = new IntNode(atoi(n1->getValue()) * atoi(n2->getValue()));
-		else if (name == "/")  dn = new IntNode(atoi(n1->getValue()) / atoi(n2->getValue()));
-		else if (name == "+")  dn = new IntNode(atoi(n1->getValue()) + atoi(n2->getValue()));
-		else if (name == "-")  dn = new IntNode(atoi(n1->getValue()) - atoi(n2->getValue()));
-		else if (name == "%")  dn = new IntNode(atoi(n1->getValue()) % atoi(n2->getValue()));
-		else if (name == "|")  dn = new IntNode(atoi(n1->getValue()) | atoi(n2->getValue()));
-		else if (name == "&")  dn = new IntNode(atoi(n1->getValue()) & atoi(n2->getValue()));
-		else if (name == "^")  dn = new IntNode(atoi(n1->getValue()) ^ atoi(n2->getValue()));
-		else if (name == "<<") dn = new IntNode(atoi(n1->getValue()) >> atoi(n2->getValue()));
-		else if (name == ">>") dn = new IntNode(atoi(n1->getValue()) >> atoi(n2->getValue()));
-		else if (name == "&&") dn = new IntNode(atoi(n1->getValue()) && atoi(n1->getValue()));
-		else if (name == "||") dn = new IntNode(atoi(n1->getValue()) || atoi(n1->getValue()));
-		else ThrowERR(1); // 不支持的操作数类型
-		return dn;
-	}
-	else if (n1->getValueType() == Value_Type::type_char
-		|| n2->getValueType() == Value_Type::type_char)
-	{
-		CharNode* dn = nullptr;
-		if (name == "*")	   dn = new CharNode(atoi(n1->getValue()) *  atoi(n2->getValue()));
-		else if (name == "/")  dn = new CharNode(atoi(n1->getValue()) /  atoi(n2->getValue()));
-		else if (name == "+")  dn = new CharNode(atoi(n1->getValue()) +  atoi(n2->getValue()));
-		else if (name == "-")  dn = new CharNode(atoi(n1->getValue()) -  atoi(n2->getValue()));
-		else if (name == "%")  dn = new CharNode(atoi(n1->getValue()) %  atoi(n2->getValue()));
-		else if (name == "|")  dn = new CharNode(atoi(n1->getValue()) |  atoi(n2->getValue()));
-		else if (name == "&")  dn = new CharNode(atoi(n1->getValue()) &  atoi(n2->getValue()));
-		else if (name == "^")  dn = new CharNode(atoi(n1->getValue()) ^  atoi(n2->getValue()));
-		else if (name == "<<") dn = new CharNode(atoi(n1->getValue()) << atoi(n2->getValue()));
-		else if (name == ">>") dn = new CharNode(atoi(n1->getValue()) >> atoi(n2->getValue()));
-		else if (name == "&&") dn = new CharNode(atoi(n1->getValue()) && atoi(n1->getValue()));
-		else if (name == "||") dn = new CharNode(atoi(n1->getValue()) || atoi(n1->getValue()));
-		else ThrowERR(1); // 不支持的操作数类型
-		return dn;
+	else {
+		ValueNode *res = calcBoolOpt(name, n1, n2);
+		if (res != nullptr){
+			return res;
+		}
+		if (n1->getValueType() == Value_Type::type_double
+			|| n2->getValueType() == Value_Type::type_double) // 任何表达式 只要含double 那结果就是 double
+		{
+			DoubleNode* dn = nullptr;
+			if (name == "*")  dn = new DoubleNode(atof(n1->getValue()) * atof(n2->getValue()));
+			else if (name == "/")  dn = new DoubleNode(atof(n1->getValue()) / atof(n2->getValue()));
+			else if (name == "+")  dn = new DoubleNode(atof(n1->getValue()) + atof(n2->getValue()));
+			else if (name == "-")  dn = new DoubleNode(atof(n1->getValue()) - atof(n2->getValue()));
+			else if (name == "&&") dn = new DoubleNode(atof(n1->getValue()) && atof(n2->getValue()));
+			else if (name == "||") dn = new DoubleNode(atof(n1->getValue()) || atof(n2->getValue()));
+			else ThrowERR(1); // 不支持的操作数类型
+			return dn;
+		}
+		else if (n1->getValueType() == Value_Type::type_float
+			|| n2->getValueType() == Value_Type::type_float)
+		{
+			FloatNode* dn = nullptr;
+			if (name == "*")	  dn = new FloatNode(atof(n1->getValue()) * atof(n2->getValue()));
+			else if (name == "/") dn = new FloatNode(atof(n1->getValue()) / atof(n2->getValue()));
+			else if (name == "+") dn = new FloatNode(atof(n1->getValue()) + atof(n2->getValue()));
+			else if (name == "-") dn = new FloatNode(atof(n1->getValue()) - atof(n2->getValue()));
+			else if (name == "&&") dn = new FloatNode(atof(n1->getValue()) && atof(n2->getValue()));
+			else if (name == "||") dn = new FloatNode(atof(n1->getValue()) || atof(n2->getValue()));
+			else ThrowERR(1); // 不支持的操作数类型
+			return dn;
+		}
+		else if (n1->getValueType() == Value_Type::type_int
+			|| n2->getValueType() == Value_Type::type_int)
+		{
+			IntNode* dn = nullptr;
+			if (name == "*")	   dn = new IntNode(atoi(n1->getValue()) * atoi(n2->getValue()));
+			else if (name == "/")  dn = new IntNode(atoi(n1->getValue()) / atoi(n2->getValue()));
+			else if (name == "+")  dn = new IntNode(atoi(n1->getValue()) + atoi(n2->getValue()));
+			else if (name == "-")  dn = new IntNode(atoi(n1->getValue()) - atoi(n2->getValue()));
+			else if (name == "%")  dn = new IntNode(atoi(n1->getValue()) % atoi(n2->getValue()));
+			else if (name == "|")  dn = new IntNode(atoi(n1->getValue()) | atoi(n2->getValue()));
+			else if (name == "&")  dn = new IntNode(atoi(n1->getValue()) & atoi(n2->getValue()));
+			else if (name == "^")  dn = new IntNode(atoi(n1->getValue()) ^ atoi(n2->getValue()));
+			else if (name == "<<") dn = new IntNode(atoi(n1->getValue()) >> atoi(n2->getValue()));
+			else if (name == ">>") dn = new IntNode(atoi(n1->getValue()) >> atoi(n2->getValue()));
+			else if (name == "&&") dn = new IntNode(atoi(n1->getValue()) && atoi(n2->getValue()));
+			else if (name == "||") dn = new IntNode(atoi(n1->getValue()) || atoi(n2->getValue()));
+			else ThrowERR(1); // 不支持的操作数类型
+			return dn;
+		}
+		else if (n1->getValueType() == Value_Type::type_char
+			|| n2->getValueType() == Value_Type::type_char)
+		{
+			CharNode* dn = nullptr;
+			if (name == "*")	   dn = new CharNode(atoi(n1->getValue()) *  atoi(n2->getValue()));
+			else if (name == "/")  dn = new CharNode(atoi(n1->getValue()) / atoi(n2->getValue()));
+			else if (name == "+")  dn = new CharNode(atoi(n1->getValue()) + atoi(n2->getValue()));
+			else if (name == "-")  dn = new CharNode(atoi(n1->getValue()) - atoi(n2->getValue()));
+			else if (name == "%")  dn = new CharNode(atoi(n1->getValue()) % atoi(n2->getValue()));
+			else if (name == "|")  dn = new CharNode(atoi(n1->getValue()) | atoi(n2->getValue()));
+			else if (name == "&")  dn = new CharNode(atoi(n1->getValue()) &  atoi(n2->getValue()));
+			else if (name == "^")  dn = new CharNode(atoi(n1->getValue()) ^ atoi(n2->getValue()));
+			else if (name == "<<") dn = new CharNode(atoi(n1->getValue()) << atoi(n2->getValue()));
+			else if (name == ">>") dn = new CharNode(atoi(n1->getValue()) >> atoi(n2->getValue()));
+			else if (name == "&&") dn = new CharNode(atoi(n1->getValue()) && atoi(n2->getValue()));
+			else if (name == "||") dn = new CharNode(atoi(n1->getValue()) || atoi(n2->getValue()));
+			else ThrowERR(1); // 不支持的操作数类型
+			return dn;
+		}
 	}
 }
 
 ValueNode* ExprNode::calculate(const char* name, ValueNode* n1, ValueNode* n2 = nullptr){
-	ValueNode *v1 = ValueNode::extractInterValue(n1) , *v2 = ValueNode::extractInterValue(n2); // 用来提取ID Expr的值
+	ValueNode *v1 = ValueNode::extractInterValue(n1), *v2 = ValueNode::extractInterValue(n2); // 用来提取ID Expr的值
 	if (n2 == nullptr){
 		// 单目运算符 负号  ! 取地址 前++ -- 后++ -- ~(取反)
 		if (name == "-"){
@@ -345,19 +362,21 @@ ValueNode* ExprNode::calculate(const char* name, ValueNode* n1, ValueNode* n2 = 
 			ValueNode* res = calcSimpleOpt("-", zero, v2);
 			delete zero;
 			return res;
-		}else if (name == "!"){
+		}
+		else if (name == "!"){
 			switch (v1->getValueType())
 			{
-				case Value_Type::type_char: 	return  new CharNode(!atoi(v1->getValue()));		break;
-				case Value_Type::type_int:		return  new IntNode(!atoi(v1->getValue()));		break;
-				case Value_Type::type_float:	return  new FloatNode(!atof(v1->getValue()));	break;
-				case Value_Type::type_double:	return  new DoubleNode(!atof(v1->getValue()));	break;
-				case Value_Type::type_string:	
-				case Value_Type::type_pointer:
-				default:
-							ThrowERR(2);
+			case Value_Type::type_char: 	return  new CharNode(!atoi(v1->getValue()));		break;
+			case Value_Type::type_int:		return  new IntNode(!atoi(v1->getValue()));		break;
+			case Value_Type::type_float:	return  new FloatNode(!atof(v1->getValue()));	break;
+			case Value_Type::type_double:	return  new DoubleNode(!atof(v1->getValue()));	break;
+			case Value_Type::type_string:
+			case Value_Type::type_pointer:
+			default:
+				ThrowERR(2);
 			}
-		}else if (name == "~"){
+		}
+		else if (name == "~"){
 			switch (v1->getValueType())
 			{
 			case Value_Type::type_char: 	return  new CharNode(~atoi(v1->getValue()));		break;
@@ -367,10 +386,11 @@ ValueNode* ExprNode::calculate(const char* name, ValueNode* n1, ValueNode* n2 = 
 			case Value_Type::type_string:
 			case Value_Type::type_pointer:
 			default:
-						ThrowERR(2);
+				ThrowERR(2);
 			}
 			// 自增运算返回的是ID本身(取地址值可证明..)
-		}else if (name == "+++"){ // 前缀 也同之前一样需要创建节点并返回, 只是创建并赋值后要更改自身(+1)
+		}
+		else if (name == "+++"){ // 前缀 也同之前一样需要创建节点并返回, 只是创建并赋值后要更改自身(+1)
 			//  ++a => a+=1 => a = a + 1
 			if (n1->getNodeType() == Node_Type::node_id){ // 只有id才能自增 类似赋值符号
 				((IDNode*)n1)->setAuto();
@@ -387,7 +407,7 @@ ValueNode* ExprNode::calculate(const char* name, ValueNode* n1, ValueNode* n2 = 
 			}
 			else
 				return nullptr;
-				//ThrowERR(1);
+			//ThrowERR(1);
 		}
 		else if (name == "++"){
 			if (n1->getNodeType() == Node_Type::node_id){
@@ -396,7 +416,7 @@ ValueNode* ExprNode::calculate(const char* name, ValueNode* n1, ValueNode* n2 = 
 			}
 			else
 				return nullptr;
-				//ThrowERR(1);
+			//ThrowERR(1);
 		}
 		else if (name == "--"){
 			if (n1->getNodeType() == Node_Type::node_id){
@@ -405,16 +425,16 @@ ValueNode* ExprNode::calculate(const char* name, ValueNode* n1, ValueNode* n2 = 
 			}
 			else
 				return nullptr;
-				//ThrowERR(1);
+			//ThrowERR(1);
 		}
-	}else{
+	}
+	else{
 		if (name == "="){
-			cout << "===========" << n1->getName()<<"="<<v2->getValue() <<endl;
 			if (n1->getNodeType() != Node_Type::node_id)
 				return nullptr;
-				//ThrowERR(3);
+			//ThrowERR(3);
 			// 先检查 指针/数组 赋值关系
-			return n1 == n2 ? n1: ((IDNode*)n1)->setValue(v2);
+			return n1 == n2 ? n1 : ((IDNode*)n1)->setValue(v2);
 		}
 		else{
 			if (isSimpleOpt(name)){
