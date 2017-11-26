@@ -409,7 +409,7 @@ ValueNode* ExprNode::calculate(const char* name, ValueNode* n1, ValueNode* n2 = 
 		}
 	}else{
 		if (name == "="){
-			cout << "===========" << n1->getName()<<"="<< v2->getName() << ":"<< v2->getValue() <<endl;
+			cout << "===========" << n1->getName()<<"="<<v2->getValue() <<endl;
 			if (n1->getNodeType() != Node_Type::node_id)
 				return nullptr;
 				//ThrowERR(3);

@@ -10,8 +10,8 @@
 
 #define LEN 1024
 
-enum Node_Type { node_norm, node_value, node_id, node_opt, node_type,};
-enum Value_Type   { type_int = 10, type_char, type_double,type_float, type_string, type_void, type_pointer, type_array };
+enum Node_Type { node_norm, node_value, node_id, node_opt, node_type,/* node_expr exprNode¿ÉÓÉtype_optÌæ´ú */ };
+enum Value_Type   { type_int = 10, type_char, type_double,type_float, type_string/* char* */, type_void, type_pointer, type_array };
 //vector<
 
 //map<Value_Type, ValueVec*> TypeMap;

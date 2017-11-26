@@ -140,7 +140,10 @@ expritem: expr {$$ = $1; printf("expritem : expr\n");}
         | initlist { //$$ = $1; 
         }
         ;
-vals:     INTEGER   {$$ = $1; printf("vals INTEGER %d name %s \n", $1->getValue(),$1->getName());}
+vals:     INTEGER   {
+                printf("integer\n");
+                //$$ = $1; printf("vals INTEGER %d name %s \n", $1->getValue(),$1->getName());
+            }
         | DBL   {$$ = $1; printf("vals DBL %f\n", $1->getValue());}
         | CHR   {$$ = $1;printf("vals CHR %c\n", $1->getValue());}
         | STR   {$$ = $1;}
@@ -183,7 +186,7 @@ expr    : '(' expr ')' {    $$ = $2;
                             //$$ = new ExprNode("+", $1, $3);
                             //$$ = new ValueNode("1", Value_Type::type_int);
                             $$->addChildren($1);  $$->addChildren($3);*/
-                            printf("%s + %s\n", $1->getName(), $3->getName());
+                            printf("expr + expr\n");
                             }
                             
         | expr '-' expr {   $$ = new ExprNode("-", $1, $3);
@@ -260,7 +263,8 @@ expr    : '(' expr ')' {    $$ = $2;
         | '~' expr {    //$$ = Node::createNode(new Node("~", Node_Type::node_opt), $2);
         }
         | vals  {
-                    $$ = $1; printf("expr vals%s\n", $$->getName());
+                    //$$ = $1; 
+                    printf("vals\n");
                  //   $$ = new ValueNode("1234");
         }
         | var   {$$ = $1;printf("expr ID \n");}
