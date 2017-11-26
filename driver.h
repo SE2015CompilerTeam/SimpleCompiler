@@ -225,4 +225,8 @@ void convert2Pointer(Node* n);
 void setStatus(bool status);
 //获取现在的状态
 bool isDefining();
+//在符号表里找ID
+bool hasID(std::string name);
+//返回符号表里ID的IDNode
+IDNode* getID(std::string name);
 #endif /* END __DRIVER_HPP__ */

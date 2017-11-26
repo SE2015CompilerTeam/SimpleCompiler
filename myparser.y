@@ -199,14 +199,16 @@ varexpr : var { $$ = $1;printf("varexpr var\n");}
                         }
         ;
 var     : ID {
-				$$ = $1;
 				printf("var ID %s\n", $1->getName());
+				cout<<$1->getValueType()<<"yacc里匹配到ID"<<endl;
+				cout<<$1<<endl;
 				if(isDefining()){//如果是声明语句
 					if(isRedefined($1)){//检测是否重定义
 						cout<<endl<<"fuck redefined!"<<endl<<endl;
 					}
 					else{
 						setIDType($1);//设置id的value_type
+						cout<<endl<<"没有重定义"<<endl<<endl;
 					}
 				}
 				else{
@@ -215,6 +217,7 @@ var     : ID {
 						cout<<endl<<"fuck undefined!"<<endl<<endl;
 					}
 				}
+				$$ = $1;
 			 }
         //| '*' var %prec '!' {}
         | var '[' INTEGER ']' {

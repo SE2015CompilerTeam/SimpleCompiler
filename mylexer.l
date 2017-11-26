@@ -160,8 +160,14 @@ kexue    ({integer}|{double})[e]{integer}
 {id}        {
                 char *name = new char[LEN];
                 strcpy_s(name,LEN+1,yytext);
-                yylval.id_n = new IDNode(name, Value_Type::type_int, yylineno);
-                addID(name, yylval.id_n);
+                string strName = name;
+                if(hasID(strName)){
+					yylval.id_n = getID(name);
+				}
+				else{
+					yylval.id_n = new IDNode(name, Value_Type::type_int, yylineno);
+					addID(name, yylval.id_n);
+				}
                 return ID;
             }
 

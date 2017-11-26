@@ -259,8 +259,9 @@ void setTypes(Value_Type tp) {
 }
 
 
-void setIDType(IDNode* node) {
+void setIDType(IDNode* node){
 	node->setValueType(type);
+	cout << node->getValueType() << "设置ID类型" << endl;
 }
 
 //enum Node_Type { node_norm, node_value, node_id, node_opt, node_type };
@@ -280,6 +281,7 @@ void getIDs(vector<Node*> ids, Node* now) {
 
 //判断条件有问题，设置的默认是type_int，但是这显然不合理啊
 bool isRedefined(IDNode* node) {
+	cout << node->getValueType() << "检测重定义" << endl;
 	if (node->getValueType() == type_int) {
 		return false;
 	}
@@ -354,4 +356,17 @@ void setStatus(bool status) {
 
 bool isDefining() {
 	return defining;
+}
+
+bool hasID(string name) {
+	if (idMap.find(name) != nullptr) {
+		return true;
+	}
+	else {
+		return false;
+	}
+}
+
+IDNode* getID(string name) {
+	return idMap.find(name);
 }
