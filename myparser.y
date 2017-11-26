@@ -36,8 +36,8 @@ Node* node;
 %token<int_n>            INTEGER TRUE FALSE NUL
 %token<double_n>         DBL
 %token<char_n>           CHR
+%token<id_n>			 ID
 %token<str>              STR
-%token<str>              ID
 %token<token>            PROC_CONTROL  ACCESS_CONTROL ERR_CONTROL USING NAMESPACE DEFINE
 %token<nodes>            READ WRITE 
 %token<token>            CLASS RETURN NEW DEL THIS
@@ -78,15 +78,16 @@ Node* node;
 
 %start program
 %%
-program : types MAIN '(' ')' block {Node::printTree($5, 0);printf("main\n");} // TODO: main args
-        //| stmts {Node::printTree($1, 0);}
+program : //types MAIN '(' ')' block {Node::printTree($5, 0);printf("main\n");} // TODO: main args
+         block {Node::printTree($1, 0);}
+         | program block {Node::printTree($2, 0);}
         ;
-types: INT  {$$ = $1; printf("types INT\n"); setTypes(Value_Type::type_int);}
-     | DOUBLE   {$$ = $1; setTypes(Value_Type::type_double);}
-     | FLOAT    {$$ = $1; setTypes(Value_Type::type_double);}
-     | CHAR {$$ = $1; setTypes(Value_Type::type_char);}
-     | VOID {$$ = $1; setTypes(Value_Type::type_void);}
-     | BOOL {$$ = $1; setTypes(Value_Type::type_bool);}
+types: INT  {$$ = $1; printf("types INT\n"); setTypes(Value_Type::type_int); setStatus(true);}
+     | DOUBLE   {$$ = $1; setTypes(Value_Type::type_double); setStatus(true);}
+     | FLOAT    {$$ = $1; setTypes(Value_Type::type_double); setStatus(true);}
+     | CHAR {$$ = $1; setTypes(Value_Type::type_char); setStatus(true);}
+     | VOID {$$ = $1; setTypes(Value_Type::type_void); setStatus(true);}
+     | BOOL {$$ = $1; setTypes(Value_Type::type_bool); setStatus(true);}
      //| types '*' { }
      ;
 /*
@@ -119,7 +120,7 @@ stmt    : def_stmt ';'{$$ = $1;  printf("stmt def_stmt ;\n");}
 initlist: '{' exprlist '}' { $$ = Node::createNode(new Node("Initlist"), $2); printf("initlist {list}\n"); }
         | '{' exprlist ',' '}' {$$ = Node::createNode(new Node("Initlist"), $2);printf("initlist {list ,}\n");}
         ;
-exprlist: exprlist ',' expritem {$$ = $1; $$->addChildren($3); $$->addCount(); printf("exprlist , item\n"); }
+exprlist: exprlist ',' expritem {$$ = $1; $$->addChildren($3); ArrayNode* tmp = (ArrayNode*)$$; tmp->addCount(); printf("exprlist , item\n"); }
         | expritem {$$ = new ArrayNode(); $$->addChildren($1);printf("exprlist item\n");}
         ;
 expritem: expr {$$ = $1; printf("expritem : expr\n");}
@@ -197,15 +198,39 @@ varexpr : var { $$ = $1;printf("varexpr var\n");}
                             printf("varexpr: var = initlist\n");
                         }
         ;
-var     : ID { $$ = $1;  printf("var ID %s\n", $1->name); }
+var     : ID {
+				$$ = $1;
+				printf("var ID %s\n", $1->getName());
+				if(isDefining()){//如果是声明语句
+					if(isRedefined($1)){//检测是否重定义
+						cout<<endl<<"fuck redefined!"<<endl<<endl;
+					}
+					else{
+						setIDType($1);//设置id的value_type
+					}
+				}
+				else{
+					cout<<"我进入了赋值语句的匹配"<<endl;
+					if(isUndefined($1)){//检测是否未定义
+						cout<<endl<<"fuck undefined!"<<endl<<endl;
+					}
+				}
+			 }
         //| '*' var %prec '!' {}
-        | var '[' INTEGER ']' {  }
+        | var '[' INTEGER ']' {
+								//把每一维空间大小压入进去
+								IDNode* tmp = (IDNode*)$1;//先转换成IDNode*
+								ArrayNode* node = (ArrayNode*)tmp->getValue();//获取IDNode成员变量ValueNode*
+								node->addSize($3->value);//压入当前维度的空间大小
+								$$ = (ValueNode*)tmp;//给$$赋值
+							  }
         | var '[' ']' {}
         | '(' var ')' { $$ = $2; }
         ;
 def_stmt: types ids  { 
                         //Node *nodes[] = {new Node("Def_Stmt"), $1, $2};
                         //$$ = Node::createNode(new Node("Def_Stmt"), new Node("TEST"));
+						setStatus(false);
                         $$ = Node::createNode(3, new Node("Def_Stmt"), $1, $2);
                         printf("def_stmt types ids\n");
                      }
@@ -267,8 +292,8 @@ int main(void)
     int n = 1;
     mylexer lexer;
     myparser parser;
-    //freopen("d:\\read.txt", "r", stdin);
-    //freopen("d:\\out.txt", "w", stdout);
+    freopen("d:\\read.txt", "r", stdin);
+    freopen("d:\\out.txt", "w", stdout);
     if (parser.yycreate(&lexer)) {
         if (lexer.yycreate(&parser)) {
             n = parser.yyparse();

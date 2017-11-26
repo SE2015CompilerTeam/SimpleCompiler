@@ -8,12 +8,17 @@ SymbolMap idMap;
 //enum Value_Type { type_int = 10, type_char, type_double, type_string/* char* */, type_void, type_bool };
 //记录当前声明语句的变量类型
 Value_Type type;
+bool defining = false;
 
 
 
 void checkNodeType(Node* n, Node_Type type) {
+	if (n == nullptr) {
+		cout << endl << "这个结点是空的啊，那他妈就无所谓类型对不对了" << endl << endl;
+	}
 	if (n->getNodeType() != type)
-		throw new exception("节点类型不匹配（Node => %d）", type);
+		cout << endl << "类型不匹配啊这还玩毛啊" << endl << endl;
+		//throw new exception("节点类型不匹配（Node => %d）", type);
 }
 
 Node* Node::createNode(int num, Node* nodes[]) {
@@ -155,7 +160,7 @@ void ArrayNode::printNode(Node* n) {
 		checkNodeType(n, Node_Type::node_array); //这个地方如果最后不是arraynode会误报不匹配
 		ValueNode* nodeTmp = (ValueNode*)n;
 		ArrayNode* node = (ArrayNode*)nodeTmp; //转换成ArrayNode才能获取维数和每维空间大小
-		cout << "ARRAY    " << node->getDimension << "  ";//打印维数
+	    cout << "ARRAY    " << node->getDimension() << "  ";//打印维数
 		vector<int> vector = node->getSize();
 		for (int i = 0; vector.size(); i++) {//打印每维空间大小
 			cout << vector[i] << "  ";
@@ -165,11 +170,9 @@ void ArrayNode::printNode(Node* n) {
 			Node::printNode(child);
 			child = child->getBrother(); //获取兄弟结点
 		}
-		
-		//打印维度+每维空间大小
 	}
 	catch (exception e) {
-		printf(e.what());
+		Node::printNode(n);
 	}
 }
 
@@ -192,10 +195,10 @@ void TypeNode::printNode(Node *n) {
 		case Value_Type::type_string:
 			printf("TYPE    STRING\n");
 			break;
-			//case "pointer & array":
-		case Value_Type::type_array:
-			printf("TYPE    ARRAY\n");
-			break;
+		//case "pointer & array":
+		//case Value_Type::type_array:
+		//	printf("TYPE    ARRAY\n");
+		//	break;
 		default:
 			printf("TYPE    Un F**king known. Fuck Me..\n");
 			break;
@@ -261,27 +264,37 @@ void setIDType(IDNode* node) {
 }
 
 //enum Node_Type { node_norm, node_value, node_id, node_opt, node_type };
-//遍历结点获取IDNode 存的是ID的名字 应该改成IDNode*才对 调用方法如下
-void getIDs(vector<char*> ids, Node* now) {
+//这个地方还有一个问题，就是int a = b;的话会把b也获取到，我猜测左值全都是child结点，不可能是brother结点，如果是这样的话就可以只获取child
+void getIDs(vector<Node*> ids, Node* now) {
 	if (now == NULL)
 		return;
 	Node* child = now->getChildren();
 	while (child != NULL) {
 		if (child->getNodeType() == node_id) {
-			ids.push_back(child->getName());
+			ids.push_back(child);
 		}
 		getIDs(ids, child);
 		child = child->getBrother();
 	}
 }
 
-//判断条件不知道有没有问题，未定义不知道是不是NULL
+//判断条件有问题，设置的默认是type_int，但是这显然不合理啊
 bool isRedefined(IDNode* node) {
-	if (node->getValueType() == NULL) {
+	if (node->getValueType() == type_int) {
 		return false;
 	}
 	else {
 		return true;
+	}
+}
+
+//判断条件有问题，设置的默认是type_int，但是这显然不合理啊
+bool isUndefined(IDNode* node) {
+	if (node->getValueType() == type_int) {
+		return true;
+	}
+	else {
+		return false;
 	}
 }
 
@@ -298,7 +311,7 @@ vector<int> ArrayNode::getSize() {
 }
 
 void ArrayNode::addSize(int tmp) {
-	this->size.insert(size.begin(), tmp);
+	this->getSize().push_back(tmp);
 }
 
 void ArrayNode::addCount() {
@@ -327,4 +340,18 @@ Node* ArrayNode::getChild(int i) {
 			return child;
 		}
 	}
+}
+
+void convert2Pointer(Node* n) {
+	ValueNode* tmp = (ValueNode*)n;
+	IDNode* node = (IDNode*)tmp;
+	node->setValueType(Value_Type::type_pointer);
+}
+
+void setStatus(bool status) {
+	defining = status;
+}
+
+bool isDefining() {
+	return defining;
 }

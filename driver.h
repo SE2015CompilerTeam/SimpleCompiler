@@ -3,6 +3,7 @@
 
 #include <deque>
 #include <map>
+#include <iostream>
 #include <string>
 #include <stdarg.h>
 #include <vector>
@@ -10,7 +11,7 @@
 #define LEN 1024
 
 enum Node_Type { node_norm, node_value, node_id, node_opt, node_type, node_array };
-enum Value_Type { type_int = 10, type_char, type_double, type_string/* char* */, type_void, type_bool , type_array};
+enum Value_Type { type_int = 10, type_char, type_double, type_string/* char* */, type_void, type_bool , type_array, type_pointer};
 //vector<
 
 //map<Value_Type, ValueVec*> TypeMap;
@@ -44,7 +45,13 @@ public:
 	Node* getBrother() { return this->brother; }
 	Node* getChildren() { return this->children; }
 	bool isLeaf() { return children == nullptr; }
-	Node_Type getNodeType() { return this->type; }
+	Node_Type getNodeType() {
+		if (this != nullptr) { return this->type; }
+		else {
+			std::cout << std::endl << "你麻痹没有nodetype 你遍历到了空指针并尝试打印它的nodetype" << std::endl << std::endl;
+			return Node_Type::node_id;
+		}
+	}
 };
 
 class ValueNode : public Node { // 存储Value类型节点 TODO： 抽象基类
@@ -129,7 +136,7 @@ public:
 class IDNode : public ValueNode {
 	bool isFunc = false;
 	int linenum;
-	//ValueNode *value;
+	ValueNode *value;
 public:
 	IDNode(char* name, Value_Type type = Value_Type::type_int, int linenum = 1) : ValueNode(name, type) {
 		this->linenum = linenum;
@@ -137,7 +144,10 @@ public:
 	}
 	void setValue(ValueNode* n) { // 先不做类型检查(可以用右值检查左值？) 直接赋值
 		this->value_type = n->getValueType();
-		this->value = n->getValue();
+		this->value = n;
+	}
+	ValueNode* getValue() {
+		return value;
 	}
 	static void printNode(Node* n);
 };
@@ -201,11 +211,18 @@ private:
 void addID(char* chrName, IDNode* sym, int index = 0);
 //在yacc匹配types中调用，设置当前声明语句的变量类型
 void setTypes(Value_Type tp);
-//在def_stmt中调用，用于设置变量类型
+//在声明语句中调用，设置当前ID的Value_Type
 void setIDType(IDNode* node);
-//传入结点获取到IDNode*
+//传入结点获取到Node*
 void getIDs(std::vector<char*> ids, Node* now);
 //传入IDNode*检测是否重定义
 bool isRedefined(IDNode* node);
-
+//传入IDNode*检测是否未定义
+bool isUndefined(IDNode* node);
+//转换成指针类型
+void convert2Pointer(Node* n);
+//表明现在是否正在进行声明
+void setStatus(bool status);
+//获取现在的状态
+bool isDefining();
 #endif /* END __DRIVER_HPP__ */
