@@ -288,21 +288,24 @@ ids     : varexpr {
 varexpr : var { 
                     IDNode* symbol = handleVarExpr((IDNode*)$1);
                     if(symbol == nullptr){
-                        yyerror("错了");
                         $$ = new ValueNode("ERROR NODE");
                     }else{
                         $$ = symbol;
                     }
-                        
-                    
                     printf("varexpr var\n");
                     }
         | var '=' expritem { 
                             // 检查重(未)定义, 返回找到的结果(未找到时插入符号表并返回传入参数)
+                          //  setAssign(true);
                             IDNode* symbol = handleVarExpr((IDNode*)$1);
-                             // $3 也可能未定义或未初始化，交给计算函数处理
-                            $$ = new ExprNode("=", symbol, $3); 
-                            $$->addChildren(symbol);  $$->addChildren($3);
+                            if(symbol == nullptr){
+                                $$ = new ValueNode("ERROR NODE");    
+                            }
+                            else{
+                                $$ = new ExprNode("=", symbol, $3);
+                                $$->addChildren(symbol);  $$->addChildren($3);
+                            }
+                             // $3 也可能未定义或未初始化，交给计算函数处理   
                         }
         ;
 var     : ID {

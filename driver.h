@@ -97,6 +97,9 @@ public:
 	static bool checkValueType(char* opt, ValueNode* t1, ValueNode* t2);
 	static bool checkValid(ValueNode* node);
 	static ValueNode* extractInterValue(ValueNode* n);
+	static ValueNode* ErrorNode(){
+		return new ValueNode("Error Node");
+	}
 };
 
 class DoubleNode : public ValueNode {
@@ -157,7 +160,7 @@ public:
 
 class IDNode : public ValueNode{ // ID的类型定义好后就不会再变,故可直接继承
 	int linenum;
-	ValueNode *value = nullptr;
+	ValueNode *tvalue = nullptr;
 	int autoFlag = 0; // 后缀++ 的标志位
 	void updateValue();
 public:
@@ -169,7 +172,7 @@ public:
 		//this->value = new IntNode(999);
 	}
 	int getLineNum();
-	void setAutoFlag(bool needIncre);
+	//void setAutoFlag(bool needIncre);
 	ValueNode* setValue(ValueNode* n);
 	//ValueNode* setValue(char* val, Value_Type type);
 	ValueNode* getValue();

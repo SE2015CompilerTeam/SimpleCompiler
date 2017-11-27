@@ -50,7 +50,7 @@ SymbolMap idMap;
 //记录当前声明语句的变量类型
 Value_Type type;
 Value_Type VALUE_TYPE;
-bool defining = false;
+bool defining = false, GET_ASSIGN = false;// 
 
 void checkNodeType(Node* n, Node_Type type) {
 	if (n == nullptr) {
@@ -183,9 +183,9 @@ int IDNode::getLineNum(){
 }
 
 void IDNode::Increment(bool incre){
-	if (this->value != nullptr){
+	if (this->tvalue != nullptr){
 		ValueNode* invisible_one = new IntNode(1); // 临时的 1
-		ValueNode* first_res = ExprNode::calcSimpleOpt( incre? "+" : "-" ,this->value, invisible_one);
+		ValueNode* first_res = ExprNode::calcSimpleOpt( incre? "+" : "-" ,this->tvalue, invisible_one);
 		ExprNode::calculate("=", this, first_res);
 		delete invisible_one;
 		delete first_res;
@@ -197,11 +197,11 @@ ValueNode* IDNode::setAuto(bool isIncre = true, bool prefix = true){
 	ValueNode* res = nullptr;
 	if (prefix){ // 自增后返回深拷贝对象
 		Increment(isIncre);
-		res = new ValueNode(this->value->getValue(), this->value_type);
+		res = new ValueNode(this->tvalue->getValue(), this->value_type);
 		return res;
 	}
 	else{ // 先返回深拷贝对象再自增
-		res = new ValueNode(this->value->getValue(), this->value_type);
+		res = new ValueNode(this->tvalue->getValue(), this->value_type);
 		Increment(isIncre);
 		return res;
 	}
@@ -210,23 +210,23 @@ ValueNode* IDNode::setAuto(bool isIncre = true, bool prefix = true){
 void IDNode::printNode(Node* n) {
 	if (n != nullptr){
 		try {
-			checkNodeType(n, Node_Type::node_id);
-			ValueNode* tmp = (ValueNode*)n;
-			IDNode* node = (IDNode*)tmp;
-			cout.setf(ios::left);
-			cout << setw(PRTSPC) << "VAR";
-			if (node->value_type == Value_Type::type_array) {
-				ValueNode* valNode = node->getValue();
-				ArrayNode* arrNode = (ArrayNode*)valNode;
-				vector<int> size = arrNode->getSize();
-				cout << n->getName();
-				for (int i = 0; i < size.size(); i++) {
-					cout << "[" << size[i] << "]";
+			if (n->getNodeType() == Node_Type::node_id){
+				IDNode* node = (IDNode*)n;
+				cout.setf(ios::left);
+				cout << setw(PRTSPC) << "VAR";
+				if (node->value_type == Value_Type::type_array) {
+					ValueNode* valNode = node->getValue();
+					ArrayNode* arrNode = (ArrayNode*)valNode;
+					vector<int> size = arrNode->getSize();
+					cout << n->getName();
+					for (int i = 0; i < size.size(); i++) {
+						cout << "[" << size[i] << "]";
+					}
+					cout << endl;
 				}
-				cout << endl;
-			}
-			else {
-				cout << n->getName() << endl;
+				else {
+					cout << n->getName() << endl;
+				}
 			}
 		}
 		catch (exception e) {
@@ -262,22 +262,22 @@ void ArrayNode::printNode(Node* n) {
 
 ValueNode* IDNode::getValue(){
 	//updateValue(); // 不是在每次拿值得时候update ! 是在一条语句结束以后！
-	return this->value;
+	return this->tvalue;
 }
 
 ValueNode* IDNode::setValue(ValueNode* n){ // 先不做类型检查(可以用右值检查左值？) 直接赋值 TODO
 	if (n != nullptr){
-		if (this->value != nullptr)
-			delete this->value; // 先清除原来保留的Value
+		if (this->tvalue != nullptr)
+			delete this->tvalue; // 先清除原来保留的Value
 		ValueNode* v = ValueNode::extractInterValue(n);
 		switch (this->value_type)
 		{
-		case Value_Type::type_char: 	this->value = new CharNode(*(CharNode*)v);		break;
-		case Value_Type::type_int:		this->value = new IntNode(*(IntNode*)v);		break;
-		case Value_Type::type_float:	this->value = new FloatNode(*(FloatNode*)v);	break;
-		case Value_Type::type_double:	this->value = new DoubleNode(*(DoubleNode*)v);	break;
-		case Value_Type::type_string:	this->value = new StringNode(*(StringNode*)v);	break;
-		case Value_Type::type_pointer:	this->value = new StringNode(*(StringNode*)v);	break;
+		case Value_Type::type_char: 	this->tvalue = new CharNode(*(CharNode*)v);		break;
+		case Value_Type::type_int:		this->tvalue = new IntNode(*(IntNode*)v);		break;
+		case Value_Type::type_float:	this->tvalue = new FloatNode(*(FloatNode*)v);	break;
+		case Value_Type::type_double:	this->tvalue = new DoubleNode(*(DoubleNode*)v);	break;
+		case Value_Type::type_string:	this->tvalue = new StringNode(*(StringNode*)v);	break;
+		case Value_Type::type_pointer:	this->tvalue = new StringNode(*(StringNode*)v);	break;
 		default:																		break;
 		}
 		return this;
@@ -350,21 +350,20 @@ ValueNode* ExprNode::calcBoolOpt(const char* type, ValueNode* node1, ValueNode* 
 		if (!strcmp(type, "!="))		return new IntNode(res1 != res2);
 		if (!strcmp(type, ">="))		return new IntNode(res1 >= res2);
 		if (!strcmp(type, "<="))		return new IntNode(res1 <= res2);
-		return nullptr;
+		return ValueNode::ErrorNode();
 	}
 	else{
 		ThrowERR(3);
-		return nullptr;
+		return ValueNode::ErrorNode();
 	}
 }
 
 // 只有 赋值运算 可以不检查值是否为空
 ValueNode* ExprNode::calcSimpleOpt(const char* name, ValueNode* node1, ValueNode* node2){
 	if (!isSimpleOpt(name)){
-		return nullptr;
+		return ValueNode::ErrorNode();
 	}
 	bool b = checkValid(node1) && checkValid(node2);
-	//cout << "checkvalid ~~~~~ " << b << endl;
 	if (checkValid(node1) && checkValid(node2)){
 		ValueNode *n1 = ValueNode::extractInterValue(node1), *n2 = ValueNode::extractInterValue(node2);
 		if (n1 == nullptr || n2 == nullptr){
@@ -387,7 +386,10 @@ ValueNode* ExprNode::calcSimpleOpt(const char* name, ValueNode* node1, ValueNode
 				else if (name == "-")  dn = new DoubleNode(atof(n1->getValue()) - atof(n2->getValue()));
 				else if (name == "&&") dn = new DoubleNode(atof(n1->getValue()) && atof(n2->getValue()));
 				else if (name == "||") dn = new DoubleNode(atof(n1->getValue()) || atof(n2->getValue()));
-				else ThrowERR(1); // 不支持的操作数类型
+				else{
+					ThrowERR(1);
+					ValueNode::ErrorNode();
+				}
 				return dn;
 			}
 			else if (n1->getValueType() == Value_Type::type_float
@@ -400,7 +402,10 @@ ValueNode* ExprNode::calcSimpleOpt(const char* name, ValueNode* node1, ValueNode
 				else if (name == "-") dn = new FloatNode(atof(n1->getValue()) - atof(n2->getValue()));
 				else if (name == "&&") dn = new FloatNode(atof(n1->getValue()) && atof(n2->getValue()));
 				else if (name == "||") dn = new FloatNode(atof(n1->getValue()) || atof(n2->getValue()));
-				else ThrowERR(1); // 不支持的操作数类型
+				else {
+					ThrowERR(1);
+					ValueNode::ErrorNode();
+				}
 				return dn;
 			}
 			else if (n1->getValueType() == Value_Type::type_int
@@ -419,7 +424,10 @@ ValueNode* ExprNode::calcSimpleOpt(const char* name, ValueNode* node1, ValueNode
 				else if (name == ">>") dn = new IntNode(atoi(n1->getValue()) >> atoi(n2->getValue()));
 				else if (name == "&&") dn = new IntNode(atoi(n1->getValue()) && atoi(n2->getValue()));
 				else if (name == "||") dn = new IntNode(atoi(n1->getValue()) || atoi(n2->getValue()));
-				else ThrowERR(1); // 不支持的操作数类型
+				else {
+					ThrowERR(1);
+					ValueNode::ErrorNode();
+				}
 				return dn;
 			}
 			else if (n1->getValueType() == Value_Type::type_char
@@ -438,19 +446,24 @@ ValueNode* ExprNode::calcSimpleOpt(const char* name, ValueNode* node1, ValueNode
 				else if (name == ">>") dn = new CharNode(atoi(n1->getValue()) >> atoi(n2->getValue()));
 				else if (name == "&&") dn = new CharNode(atoi(n1->getValue()) && atoi(n2->getValue()));
 				else if (name == "||") dn = new CharNode(atoi(n1->getValue()) || atoi(n2->getValue()));
-				else ThrowERR(1); // 不支持的操作数类型
+				else { 
+					ThrowERR(1);
+					return ValueNode::ErrorNode();
+				}
 				return dn;
 			}
 		}
 	}
 	else{
 		ThrowERR(4);
-		return nullptr;
+		return ValueNode::ErrorNode();
 	}
 
 }
 
 ValueNode* ExprNode::calculate(const char* opt, ValueNode* n1, ValueNode* n2 = nullptr){
+	if (n1 == nullptr)
+		return ValueNode::ErrorNode();
 	ValueNode *v1 = ValueNode::extractInterValue(n1);
 	ValueNode *v2 = ValueNode::extractInterValue(n2); // 用来提取ID Expr的值
 	if (n2 == nullptr){
@@ -458,7 +471,7 @@ ValueNode* ExprNode::calculate(const char* opt, ValueNode* n1, ValueNode* n2 = n
 		if (v1 == nullptr){
 			// 标识符还未初始化
 			ThrowERR(4);
-			return nullptr;
+			return ValueNode::ErrorNode();
 		}
 		else{
 			if (opt == "-"){
@@ -478,6 +491,8 @@ ValueNode* ExprNode::calculate(const char* opt, ValueNode* n1, ValueNode* n2 = n
 				case Value_Type::type_pointer:
 				default:
 					ThrowERR(2);
+					return ValueNode::ErrorNode();
+					
 				}
 			}
 			else if (opt == "~"){
@@ -491,6 +506,7 @@ ValueNode* ExprNode::calculate(const char* opt, ValueNode* n1, ValueNode* n2 = n
 				case Value_Type::type_pointer:
 				default:
 					ThrowERR(2);
+					return ValueNode::ErrorNode();
 				}
 				// 自增运算返回的是ID本身(取地址值可证明..)
 			}
@@ -498,54 +514,57 @@ ValueNode* ExprNode::calculate(const char* opt, ValueNode* n1, ValueNode* n2 = n
 				//  ++a => a+=1 => a = a + 1
 				if (n1->getNodeType() == Node_Type::node_id){ // 只有id才能自增 类似赋值符号
 					return ((IDNode*)n1)->setAuto(true, true);
-					//return new IDNode(*(IDNode*)n1);
 				}
-				else
-					//ThrowERR(1);
-					return nullptr;
+				else{
+					ThrowERR(1);
+					return ValueNode::ErrorNode();
+				}
 			}
 			else if (opt == "---"){
 				if (n1->getNodeType() == Node_Type::node_id){
 					return ((IDNode*)n1)->setAuto(false, true);
 					//return new IDNode(*(IDNode*)n1);
 				}
-				else
-					return nullptr;
-				//ThrowERR(1);
+				else{
+					ThrowERR(1);
+					return ValueNode::ErrorNode();
+				}
 			}
 			else if (opt == "++"){
 				if (n1->getNodeType() == Node_Type::node_id){
 					return ((IDNode*)n1)->setAuto(true, false);
 				}
-				else
-					return nullptr;
-				//ThrowERR(1);
+				else{
+					ThrowERR(1);
+					return ValueNode::ErrorNode();
+				}
 			}
 			else if (opt == "--"){
 				if (n1->getNodeType() == Node_Type::node_id){
 					return ((IDNode*)n1)->setAuto(true, false);
 				}
-				else
-					return nullptr;
-				//ThrowERR(1);
+				else{
+					ThrowERR(1);
+					return ValueNode::ErrorNode();
+				}
 			}
 		}
 	}
 	else{
 		if (opt == "="){
 			if (n1->getNodeType() != Node_Type::node_id){
-				ThrowERR(2);
-				return nullptr;
+				ThrowERR(2);			
+				return ValueNode::ErrorNode();
 			}
 			// 先检查 指针/数组 赋值关系
 			if (n1 == n2)		return n2;
 			((IDNode*)n1)->setValue(v2);
-			return n1;
+			return (IDNode*)n1;
 		}
 		else{
 			if (v1 == nullptr){
 				ThrowERR(4);
-				return nullptr;
+				return  ValueNode::ErrorNode();
 			}
 			else{
 				if (isSimpleOpt(opt)){
@@ -565,7 +584,7 @@ ValueNode* ExprNode::calculate(const char* opt, ValueNode* n1, ValueNode* n2 = n
 					else if (opt == "^=")		first_result = calculate("^", n1, n2);
 					else {
 						ThrowERR(6);
-						return nullptr; //throw new myOptFault("不支持的组合运算符");
+						return ValueNode::ErrorNode(); //throw new myOptFault("不支持的组合运算符");
 					}
 					return calculate("=", n1, first_result);
 				}
@@ -695,18 +714,18 @@ IDNode* getID(string name) {
 }
 IDNode* handleVarExpr(IDNode* node){
 	IDNode* symbol = getID(node->getName());//根据要插入值的name 查找
-	if (isDefining()){
+	IDNode* nn = idMap.find(node->getName());
+	if (isDefining()){ 
 		if (symbol != nullptr){
 			// 正在定义的变量已经插入了符号表  =>  重定义
-			cout << "重定义的标识符: " << node->getName() << " 已在 " << symbol->getLineNum() << " 行定义" << endl;
+			cout << "重定义的标识符: " << symbol->getName() << " 已在 " << symbol->getLineNum() << " 行定义" << endl;
 			//yyerror("重定义的标识符");
 			//ThrowERR(5);
 			return nullptr;
 		}
 		else{
-			cout << "正在定义: " << node->getName() << endl;
 			addID(node->getName(), node);
-			symbol = node;
+			symbol = getID(node->getName()); // 这不能直接用node赋值！！！ 必须从map取！！
 			setIDType(symbol);
 			return symbol;
 		}
