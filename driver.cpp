@@ -184,6 +184,7 @@ ValueNode* IDNode::setAuto(bool isIncre = true, bool prefix = true){
 		return res;
 	}
 	else{ // 先返回深拷贝对象再自增
+		res->setValue(this->value->getValue(), this->value_type);
 		res = new ValueNode(this->value->getValue(), this->value_type);
 		Increment(isIncre);
 		return res;

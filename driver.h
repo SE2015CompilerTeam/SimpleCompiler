@@ -56,7 +56,6 @@ protected:
 public:
 	ValueNode() :Node("Value", Node_Type::node_value){
 		this->value_type = Value_Type::type_int;
-		this->value = nullptr;
 	}
 
 	ValueNode(const char* value, Value_Type value_type = Value_Type::type_int) :Node("Value", Node_Type::node_value){
@@ -162,7 +161,7 @@ public:
 	//ValueNode* setValue(char* val, Value_Type type);
 	ValueNode* getValue();
 	static void printNode(Node* n);
-	ValueNode* setAuto(bool isIncre, bool prefix);
+	ValueNode*  setAuto(bool isIncre, bool prefix);
 	void Increment(bool incre);
 };
 
