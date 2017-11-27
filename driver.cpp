@@ -1,6 +1,5 @@
 #include "driver.h"
-#include <iostream>
-#include <iomanip>
+
 using namespace std;
 
 #define PRTSPC 10
@@ -11,7 +10,9 @@ static const char* ErrorMSG[] = {
 	"²»Ö§³ÖµÄ²Ù×÷ÊýÀàÐÍ",
 	"±í´ïÊ½±ØÐëÊÇ¿ÉÐÞ¸ÄµÄ×óÖµ",
 	"±í´ïÊ½È±ÉÙ×óÖµ",
-	"Ê¹ÓÃÁËÎ´³õÊ¼»¯µÄ»ò³õÊ¼»¯Îª¿ÕµÄ±êÊ¶·û"
+	"Ê¹ÓÃÁËÎ´³õÊ¼»¯µÄ»ò³õÊ¼»¯Îª¿ÕµÄ±êÊ¶·û",
+	"ÖØ¶¨ÒåµÄ±êÊ¶·û",
+	"²»Ö§³ÖµÄÔËËã·û",
 };
 
 bool isSimpleOpt(const char* name){
@@ -26,13 +27,11 @@ bool isSimpleOpt(const char* name){
 		return false;
 	return true;
 }
-
 class myOptFault :public exception
 {
 public:
 	myOptFault(char* msg = "defualt msg\n") :exception(msg){}
 };
-
 void ThrowERR(int index){ // ´íÎóÏûÏ¢Ë÷Òý
 	//throw new exception(ErrorMSG[index]);
 	//yyerror(ErrorMSG[index]);
@@ -40,39 +39,51 @@ void ThrowERR(int index){ // ´íÎóÏûÏ¢Ë÷Òý
 	fprintf(stderr, "\n");
 }
 void ThrowERR(char* msg){ // ´íÎóÏûÏ¢Ë÷Òý
+	//yyerror(msg);
 	fprintf(stderr, msg);
 	fprintf(stderr, "\n");
 }
 
-bool Node::checkNodeType(Node* n1, Node_Type type){
-	return n1->getNodeType() == type;
-}
-bool Node::checkNodeType(Node* n1, Node *n2){
-	return checkNodeType(n1, n2->getNodeType());
+
+SymbolMap idMap;
+//enum Value_Type { type_int = 10, type_char, type_double, type_string/* char* */, type_void, type_bool };
+//¼ÇÂ¼µ±Ç°ÉùÃ÷Óï¾äµÄ±äÁ¿ÀàÐÍ
+Value_Type type;
+Value_Type VALUE_TYPE;
+bool defining = false;
+
+void checkNodeType(Node* n, Node_Type type) {
+	if (n == nullptr) {
+		cout << endl << "Õâ¸ö½áµãÊÇ¿ÕµÄ°¡£¬ÄÇËûÂè¾ÍÎÞËùÎ½ÀàÐÍ¶Ô²»¶ÔÁË" << endl << endl;
+	}
+	if (n->getNodeType() != type)
+		cout << endl << "ÀàÐÍ²»Æ¥Åä°¡Õâ»¹ÍæÃ«°¡" << endl << endl;
+		//throw new exception("½ÚµãÀàÐÍ²»Æ¥Åä£¨Node => %d£©", type);
 }
 
-Node* Node::createNode(int num, Node* nodes[]){
+Node* Node::createNode(int num, Node* nodes[]) {
 	Node* root = NULL;
-	if (num > 0 && nodes[0] != NULL){
+	if (num > 0 && nodes[0] != NULL) {
 		root = nodes[0];
-		for (int i = 1; i < num; i++){
+		for (int i = 1; i < num; i++) {
 			if (nodes[i] == NULL) continue;
 			root->addChildren(nodes[i]);
 		}
 	}
 	return root;
 }
-Node* Node::createNode(int num, ...){
+
+Node* Node::createNode(int num, ...) {
 	va_list argp;
 	Node* node = NULL;
 	Node* root = NULL;
 	va_start(argp, num);
-	for (int i = 0; i < num; i++){
+	for (int i = 0; i < num; i++) {
 		node = va_arg(argp, Node*);
 		if (node == NULL) continue;
 		if (i == 0)
 			root = node;
-		else{
+		else {
 			root->addChildren(node);
 		}
 	}
@@ -80,31 +91,33 @@ Node* Node::createNode(int num, ...){
 	return root;
 }
 
-Node* Node::createNode(Node* root, Node* node){
+Node* Node::createNode(Node* root, Node* node) {
 	root->addChildren(node);
 	return root;
 }
 
-void Node::addBrother(Node *bro){
-
+void Node::addBrother(Node *bro) {
 	Node *cur = this;
 	while (cur->brother != NULL)
 		cur = cur->brother;
 	cur->brother = bro;
 }
 
-void Node::addChildren(Node *child){
-	if (this->children == NULL){
+void Node::addChildren(Node *child) {
+	if (this->children == NULL)
 		this->children = child;
-	}
-
 	else
 		this->children->addBrother(child);
 }
-void SymbolMap::insert(string name, IDNode* sym){
+
+void SymbolMap::insert(string name, IDNode* sym) {
+	if (this->find(name) != nullptr) {
+		return;
+	}
 	this->Map.insert(pair<string, IDNode>(name, *sym));
 }
-IDNode* SymbolMap::find(string name){
+
+IDNode* SymbolMap::find(string name) {
 	map<string, IDNode>::iterator it = Map.find(name);
 	if (it == Map.end())
 		return nullptr;
@@ -112,9 +125,9 @@ IDNode* SymbolMap::find(string name){
 		return &(it->second);
 }
 
-IDNode* SymbolTable::find(string name){
+IDNode* SymbolTable::find(string name) {
 	IDNode* symbol;
-	for (deque<SymbolMap>::iterator it = MapStack.begin(); it != MapStack.end(); it++){
+	for (deque<SymbolMap>::iterator it = MapStack.begin(); it != MapStack.end(); it++) {
 		symbol = it->find(name);
 		if (symbol != nullptr)
 			return symbol;
@@ -122,7 +135,7 @@ IDNode* SymbolTable::find(string name){
 	return nullptr;
 }
 
-void Node::printNode(Node *n){
+void Node::printNode(Node *n) {
 	if (n != nullptr){
 		switch (n->type)
 		{
@@ -148,21 +161,25 @@ void Node::printNode(Node *n){
 }
 
 void ExprNode::printNode(Node* n){
-	if (n->getNodeType() == Node_Type::node_opt){
-		cout.setf(ios::left);
-		ExprNode *en = (ExprNode*)n;
-		cout << setw(PRTSPC) << "EXPR" << en->getName()<<en->getValue()->getValue() << endl;
+	if (n != nullptr){
+		if (n->getNodeType() == Node_Type::node_opt){
+			cout.setf(ios::left);
+			ExprNode *en = (ExprNode*)n;
+			cout << setw(PRTSPC) << "EXPR" << en->getName() << "    " << en->getValue()->getValue() << endl;
+		}
 	}
 }
 
+
 void ValueNode::printNode(Node* n){
-	ValueNode *node = extractInterValue((ValueNode*)n);
-	cout.setf(ios::left);
-	cout << setw(PRTSPC) << "Value" << node->getValue() << endl;
+	if (n != nullptr){
+		ValueNode *node = extractInterValue((ValueNode*)n);
+		cout.setf(ios::left);
+		cout << setw(PRTSPC) << "Value" << node->getValue() << endl;
+	}
 }
-void IDNode::printNode(Node* n){
-	cout.setf(ios::left);
-	cout << setw(PRTSPC) << "VAR" << n->getName() << endl;
+int IDNode::getLineNum(){
+	return this->linenum;
 }
 
 void IDNode::Increment(bool incre){
@@ -184,30 +201,64 @@ ValueNode* IDNode::setAuto(bool isIncre = true, bool prefix = true){
 		return res;
 	}
 	else{ // ÏÈ·µ»ØÉî¿½±´¶ÔÏóÔÙ×ÔÔö
-		res->setValue(this->value->getValue(), this->value_type);
 		res = new ValueNode(this->value->getValue(), this->value_type);
 		Increment(isIncre);
 		return res;
 	}
 }
 
-void IDNode::updateValue(){
-	while (this->autoFlag != 0){
-		if (this->autoFlag > 0){// ×ÔÔö1
-			this->autoFlag -= 1;
-			setAuto(true);
+void IDNode::printNode(Node* n) {
+	if (n != nullptr){
+		try {
+			checkNodeType(n, Node_Type::node_id);
+			ValueNode* tmp = (ValueNode*)n;
+			IDNode* node = (IDNode*)tmp;
+			cout.setf(ios::left);
+			cout << setw(PRTSPC) << "VAR";
+			if (node->value_type == Value_Type::type_array) {
+				ValueNode* valNode = node->getValue();
+				ArrayNode* arrNode = (ArrayNode*)valNode;
+				vector<int> size = arrNode->getSize();
+				cout << n->getName();
+				for (int i = 0; i < size.size(); i++) {
+					cout << "[" << size[i] << "]";
+				}
+				cout << endl;
+			}
+			else {
+				cout << n->getName() << endl;
+			}
 		}
-		else if (this->autoFlag < 0){// ×Ô¼õ1
-			this->autoFlag += 1;
-			setAuto(false);
+		catch (exception e) {
+			printf(e.what());
 		}
 	}
+	
 }
 
-void IDNode::setAutoFlag(bool needIncre){ //ºó×º++
-	this->autoFlag += needIncre;
+void ArrayNode::printNode(Node* n) {
+	try {
+		if (n == nullptr) { //Èç¹ûµ±Ç°ÊÇ¿Õ½áµã¾Í²»´òÓ¡
+			return;
+		}
+		checkNodeType(n, Node_Type::node_array); //Õâ¸öµØ·½Èç¹û×îºó²»ÊÇarraynode»áÎó±¨²»Æ¥Åä
+		ValueNode* nodeTmp = (ValueNode*)n;
+		ArrayNode* node = (ArrayNode*)nodeTmp; //×ª»»³ÉArrayNode²ÅÄÜ»ñÈ¡Î¬ÊýºÍÃ¿Î¬¿Õ¼ä´óÐ¡
+	    cout << "ARRAY    " << node->getDimension() << "  ";//´òÓ¡Î¬Êý
+		vector<int> vector = node->getSize();
+		for (int i = 0; vector.size(); i++) {//´òÓ¡Ã¿Î¬¿Õ¼ä´óÐ¡
+			cout << vector[i] << "  ";
+		}
+		Node* child = node->getChildren(); //»ñÈ¡×Ó½Úµã
+		while (child != nullptr) {
+			Node::printNode(child);
+			child = child->getBrother(); //»ñÈ¡ÐÖµÜ½áµã
+		}
+	}
+	catch (exception e) {
+		Node::printNode(n);
+	}
 }
-
 
 ValueNode* IDNode::getValue(){
 	//updateValue(); // ²»ÊÇÔÚÃ¿´ÎÄÃÖµµÃÊ±ºòupdate ! ÊÇÔÚÒ»ÌõÓï¾ä½áÊøÒÔºó£¡
@@ -234,22 +285,24 @@ ValueNode* IDNode::setValue(ValueNode* n){ // ÏÈ²»×öÀàÐÍ¼ì²é(¿ÉÒÔÓÃÓÒÖµ¼ì²é×óÖµ£
 	else
 		return nullptr;
 }
-
 void TypeNode::printNode(Node *n){
-	cout.setf(ios::left);
-	TypeNode* node = (TypeNode*)n;
-	cout << setw(PRTSPC) << "TYPE";
-	switch (node->type_type)
-	{
-	case Value_Type::type_char:		cout << "CHAR" << endl;		break;
-	case Value_Type::type_int:		cout << "INT" << endl;		break;
-	case Value_Type::type_double:	cout << "DOUBLE" << endl;		break;
-	case Value_Type::type_float:	cout << "FLOAT" << endl;		break;
-	case Value_Type::type_string:	cout << "STRING" << endl;		break;
-	case Value_Type::type_pointer:	cout << "PINTER" << endl;		break;
-	default:	cout << "Un F**king known.Fuck Me.." << endl;		break;
+	if (n != nullptr){
+		cout.setf(ios::left);
+		TypeNode* node = (TypeNode*)n;
+		cout << setw(PRTSPC) << "TYPE";
+		switch (node->type_type)
+		{
+		case Value_Type::type_char:		cout << "CHAR" << endl;		break;
+		case Value_Type::type_int:		cout << "INT" << endl;		break;
+		case Value_Type::type_double:	cout << "DOUBLE" << endl;		break;
+		case Value_Type::type_float:	cout << "FLOAT" << endl;		break;
+		case Value_Type::type_string:	cout << "STRING" << endl;		break;
+		case Value_Type::type_pointer:	cout << "PINTER" << endl;		break;
+		default:	cout << "Un F**king known.Fuck Me.." << endl;		break;
+		}
 	}
 }
+
 void Node::printTree(Node* node, int level){
 	if (node == NULL)
 		return;
@@ -288,15 +341,11 @@ ValueNode* ValueNode::extractInterValue(ValueNode *n){
 
 ValueNode* ExprNode::calcBoolOpt(const char* type, ValueNode* node1, ValueNode* node2){
 	// >, <, ==, !=
-	/*if (node1 == nullptr || node2 == nullptr){
-		ThrowERR(3);
-		return nullptr;
-	}*/
 	if (ValueNode::checkValid(node1) && ValueNode::checkValid(node2)){
 		ValueNode *n1 = ValueNode::extractInterValue(node1), *n2 = ValueNode::extractInterValue(node2);
 		double res1 = atof(n1->getValue()), res2 = atof(n2->getValue());
-		if (!strcmp(type, ">"))		return new IntNode(res1 > res2);
-		if (!strcmp(type, "<"))		return new IntNode(res1 < res2);
+		if (!strcmp(type, ">"))			return new IntNode(res1 > res2);
+		if (!strcmp(type, "<"))			return new IntNode(res1 < res2);
 		if (!strcmp(type, "=="))		return new IntNode(res1 == res2);
 		if (!strcmp(type, "!="))		return new IntNode(res1 != res2);
 		if (!strcmp(type, ">="))		return new IntNode(res1 >= res2);
@@ -314,6 +363,8 @@ ValueNode* ExprNode::calcSimpleOpt(const char* name, ValueNode* node1, ValueNode
 	if (!isSimpleOpt(name)){
 		return nullptr;
 	}
+	bool b = checkValid(node1) && checkValid(node2);
+	//cout << "checkvalid ~~~~~ " << b << endl;
 	if (checkValid(node1) && checkValid(node2)){
 		ValueNode *n1 = ValueNode::extractInterValue(node1), *n2 = ValueNode::extractInterValue(node2);
 		if (n1 == nullptr || n2 == nullptr){
@@ -396,10 +447,10 @@ ValueNode* ExprNode::calcSimpleOpt(const char* name, ValueNode* node1, ValueNode
 		ThrowERR(4);
 		return nullptr;
 	}
-	
+
 }
 
-ValueNode* ExprNode::calculate(const char* name, ValueNode* n1, ValueNode* n2 = nullptr){
+ValueNode* ExprNode::calculate(const char* opt, ValueNode* n1, ValueNode* n2 = nullptr){
 	ValueNode *v1 = ValueNode::extractInterValue(n1);
 	ValueNode *v2 = ValueNode::extractInterValue(n2); // ÓÃÀ´ÌáÈ¡ID ExprµÄÖµ
 	if (n2 == nullptr){
@@ -410,13 +461,13 @@ ValueNode* ExprNode::calculate(const char* name, ValueNode* n1, ValueNode* n2 = 
 			return nullptr;
 		}
 		else{
-			if (name == "-"){
+			if (opt == "-"){
 				IntNode* zero = new IntNode(0); // ·ûºÅÁÙÊ±±äÎª 0 - ID
 				ValueNode* res = calcSimpleOpt("-", zero, v1);
 				delete zero;
 				return res;
 			}
-			else if (name == "!"){
+			else if (opt == "!"){
 				switch (v1->getValueType())
 				{
 				case Value_Type::type_char: 	return  new CharNode(!atoi(v1->getValue()));		break;
@@ -429,7 +480,7 @@ ValueNode* ExprNode::calculate(const char* name, ValueNode* n1, ValueNode* n2 = 
 					ThrowERR(2);
 				}
 			}
-			else if (name == "~"){
+			else if (opt == "~"){
 				switch (v1->getValueType())
 				{
 				case Value_Type::type_char: 	return  new CharNode(~atoi(v1->getValue()));		break;
@@ -443,7 +494,7 @@ ValueNode* ExprNode::calculate(const char* name, ValueNode* n1, ValueNode* n2 = 
 				}
 				// ×ÔÔöÔËËã·µ»ØµÄÊÇID±¾Éí(È¡µØÖ·Öµ¿ÉÖ¤Ã÷..)
 			}
-			else if (name == "+++"){ // Ç°×º Ò²Í¬Ö®Ç°Ò»ÑùÐèÒª´´½¨½Úµã²¢·µ»Ø, Ö»ÊÇ´´½¨²¢¸³ÖµºóÒª¸ü¸Ä×ÔÉí(+1)
+			else if (opt == "+++"){ // Ç°×º Ò²Í¬Ö®Ç°Ò»ÑùÐèÒª´´½¨½Úµã²¢·µ»Ø, Ö»ÊÇ´´½¨²¢¸³ÖµºóÒª¸ü¸Ä×ÔÉí(+1)
 				//  ++a => a+=1 => a = a + 1
 				if (n1->getNodeType() == Node_Type::node_id){ // Ö»ÓÐid²ÅÄÜ×ÔÔö ÀàËÆ¸³Öµ·ûºÅ
 					return ((IDNode*)n1)->setAuto(true, true);
@@ -453,7 +504,7 @@ ValueNode* ExprNode::calculate(const char* name, ValueNode* n1, ValueNode* n2 = 
 					//ThrowERR(1);
 					return nullptr;
 			}
-			else if (name == "---"){
+			else if (opt == "---"){
 				if (n1->getNodeType() == Node_Type::node_id){
 					return ((IDNode*)n1)->setAuto(false, true);
 					//return new IDNode(*(IDNode*)n1);
@@ -462,7 +513,7 @@ ValueNode* ExprNode::calculate(const char* name, ValueNode* n1, ValueNode* n2 = 
 					return nullptr;
 				//ThrowERR(1);
 			}
-			else if (name == "++"){
+			else if (opt == "++"){
 				if (n1->getNodeType() == Node_Type::node_id){
 					return ((IDNode*)n1)->setAuto(true, false);
 				}
@@ -470,7 +521,7 @@ ValueNode* ExprNode::calculate(const char* name, ValueNode* n1, ValueNode* n2 = 
 					return nullptr;
 				//ThrowERR(1);
 			}
-			else if (name == "--"){
+			else if (opt == "--"){
 				if (n1->getNodeType() == Node_Type::node_id){
 					return ((IDNode*)n1)->setAuto(true, false);
 				}
@@ -481,7 +532,7 @@ ValueNode* ExprNode::calculate(const char* name, ValueNode* n1, ValueNode* n2 = 
 		}
 	}
 	else{
-		if (name == "="){
+		if (opt == "="){
 			if (n1->getNodeType() != Node_Type::node_id){
 				ThrowERR(2);
 				return nullptr;
@@ -497,23 +548,23 @@ ValueNode* ExprNode::calculate(const char* name, ValueNode* n1, ValueNode* n2 = 
 				return nullptr;
 			}
 			else{
-				if (isSimpleOpt(name)){
-					return calcSimpleOpt(name, v1, v2);
+				if (isSimpleOpt(opt)){
+					return calcSimpleOpt(opt, v1, v2);
 				}
 				else{
 					if (n1->getNodeType() != Node_Type::node_id) // TODO:Êý×éÒ²¿ÉÒÔ×ö×óÖµ
 						ThrowERR(3);
 					ValueNode* first_result = nullptr;
-					if (name == "+=")			first_result = calculate("+", n1, n2);
-					else if (name == "-=")		first_result = calculate("-", n1, n2);
-					else if (name == "*=")		first_result = calculate("*", n1, n2);
-					else if (name == "/=")		first_result = calculate("/", n1, n2);
-					else if (name == "%=")		first_result = calculate("%", n1, n2);
-					else if (name == "&=")		first_result = calculate("&", n1, n2);
-					else if (name == "|=")		first_result = calculate("|", n1, n2);
-					else if (name == "^=")		first_result = calculate("^", n1, n2);
+					if (opt == "+=")			first_result = calculate("+", n1, n2);
+					else if (opt == "-=")		first_result = calculate("-", n1, n2);
+					else if (opt == "*=")		first_result = calculate("*", n1, n2);
+					else if (opt == "/=")		first_result = calculate("/", n1, n2);
+					else if (opt == "%=")		first_result = calculate("%", n1, n2);
+					else if (opt == "&=")		first_result = calculate("&", n1, n2);
+					else if (opt == "|=")		first_result = calculate("|", n1, n2);
+					else if (opt == "^=")		first_result = calculate("^", n1, n2);
 					else {
-						cout << "²»Ö§³ÖµÄÔËËã·û" << endl;
+						ThrowERR(6);
 						return nullptr; //throw new myOptFault("²»Ö§³ÖµÄ×éºÏÔËËã·û");
 					}
 					return calculate("=", n1, first_result);
@@ -523,6 +574,91 @@ ValueNode* ExprNode::calculate(const char* name, ValueNode* n1, ValueNode* n2 = 
 	}
 }
 
+//ÅÐ¶ÏÌõ¼þÓÐÎÊÌâ£¬ÉèÖÃµÄÄ¬ÈÏÊÇtype_int£¬µ«ÊÇÕâÏÔÈ»²»ºÏÀí°¡
+bool isRedefined(IDNode* node) {
+	return idMap.find(node->getName()) != nullptr;
+}
+//ÅÐ¶ÏÌõ¼þÓÐÎÊÌâ£¬ÉèÖÃµÄÄ¬ÈÏÊÇtype_int£¬µ«ÊÇÕâÏÔÈ»²»ºÏÀí°¡
+bool isUndefined(IDNode* node) {
+	return idMap.find(node->getName()) == nullptr;
+}
+
+//ÓÃindexÇø·Ö²»Í¬µÄ×÷ÓÃÓòÏÂµÄ±í,´ýÀ©Õ¹
+void addID(char* chrName, IDNode* sym, int index) {
+	string strNmae = chrName;
+	if (idMap.find(strNmae) == nullptr && sym != nullptr) {
+		idMap.insert(strNmae, sym);
+	}
+}
+
+void setTypes(Value_Type tp) { // È«¾ÖµÄtype
+	VALUE_TYPE = tp;
+}
+
+
+void setIDType(IDNode* node){
+	node->setValueType(VALUE_TYPE);
+}
+
+//enum Node_Type { node_norm, node_value, node_id, node_opt, node_type };
+//Õâ¸öµØ·½»¹ÓÐÒ»¸öÎÊÌâ£¬¾ÍÊÇint a = b;µÄ»°»á°ÑbÒ²»ñÈ¡µ½£¬ÎÒ²Â²â×óÖµÈ«¶¼ÊÇchild½áµã£¬²»¿ÉÄÜÊÇbrother½áµã£¬Èç¹ûÊÇÕâÑùµÄ»°¾Í¿ÉÒÔÖ»»ñÈ¡child
+void getIDs(vector<Node*> ids, Node* now) {
+	if (now == NULL)
+		return;
+	Node* child = now->getChildren();
+	while (child != NULL) {
+		if (child->getNodeType() == node_id) {
+			ids.push_back(child);
+		}
+		getIDs(ids, child);
+		child = child->getBrother();
+	}
+}
+
+
+int ArrayNode::getDimension() {
+	return this->dimension;
+}
+
+void ArrayNode::setDimension(int i) {
+	this->dimension = i;
+}
+
+vector<int> ArrayNode::getSize() {
+	return this->size;
+}
+
+void ArrayNode::addSize(int tmp) {
+	this->size.push_back(tmp);
+}
+
+void ArrayNode::addCount() {
+	this->count += 1;
+}
+
+Node* ArrayNode::getChild(int i) {
+	Node* child = this->getChildren();
+	if (child == nullptr) { //Èç¹ûÃ»ÓÐº¢×Ó½áµã
+		cout << "Êý×éÔ½½ç" << endl;
+		return nullptr;
+	}
+	else {
+		if (i == 0) { //Èç¹û·µ»ØÏÂ±êÎª0
+			return child;
+		}
+		else {
+			for (int k = 0; k < i; i++) {
+				child = child->getBrother(); //»ñÈ¡ÐÖµÜ½áµã
+				if (child == nullptr) {
+					cout << "Êý×éÔ½½ç" << endl;
+					return nullptr;
+					break;
+				}
+			}
+			return child;
+		}
+	}
+}
 ValueNode* ExprNode::setValue(ValueNode* node){
 	if (node != nullptr){
 		if (this->tvalue != nullptr)
@@ -533,5 +669,56 @@ ValueNode* ExprNode::setValue(ValueNode* node){
 	}
 	else{
 		return nullptr;
+	}
+}
+
+void convert2Pointer(Node* n) {
+	ValueNode* tmp = (ValueNode*)n;
+	IDNode* node = (IDNode*)tmp;
+	node->setValueType(Value_Type::type_pointer);
+}
+
+void setStatus(bool status) {
+	defining = status;
+}
+
+bool isDefining() {
+	return defining;
+}
+
+bool hasID(string name) {
+	return idMap.find(name) != nullptr;
+}
+
+IDNode* getID(string name) {
+	return idMap.find(name);
+}
+IDNode* handleVarExpr(IDNode* node){
+	IDNode* symbol = getID(node->getName());//¸ù¾ÝÒª²åÈëÖµµÄname ²éÕÒ
+	if (isDefining()){
+		if (symbol != nullptr){
+			// ÕýÔÚ¶¨ÒåµÄ±äÁ¿ÒÑ¾­²åÈëÁË·ûºÅ±í  =>  ÖØ¶¨Òå
+			cout << "ÖØ¶¨ÒåµÄ±êÊ¶·û: " << node->getName() << " ÒÑÔÚ " << symbol->getLineNum() << " ÐÐ¶¨Òå" << endl;
+			//yyerror("ÖØ¶¨ÒåµÄ±êÊ¶·û");
+			//ThrowERR(5);
+			return nullptr;
+		}
+		else{
+			cout << "ÕýÔÚ¶¨Òå: " << node->getName() << endl;
+			addID(node->getName(), node);
+			symbol = node;
+			setIDType(symbol);
+			return symbol;
+		}
+	}
+	else{
+		// ÕýÔÚ¸³Öµ
+		if (symbol == nullptr){
+			// Î´ÉùÃ÷µÄ±äÁ¿
+			cout << "Ê¹ÓÃÎ´ÉùÃ÷µÄ±äÁ¿ " << node->getName() << endl;
+			//ThrowERR(4);
+			return nullptr;
+		}
+		return symbol;
 	}
 }

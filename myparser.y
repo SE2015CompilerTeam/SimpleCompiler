@@ -6,11 +6,14 @@
 #include "driver.h"
 #include "myparser.h"
 extern int yylex();
+extern void yyerror(const char* msg);
 extern int yylineno;
 extern int lineno;
 //extern char* yytext;
 //extern int yyleng;
 using namespace std;
+
+
 %}
 %union {
     class Node *nodes;
@@ -74,7 +77,6 @@ using namespace std;
 %type <nodes> initlist // 这个该是啥type呢。。
 %type <value_n> vals var varexpr
 %type <nodes> ids  exprlist
-//%type <nodes> func_def_stmt
 
 %start program
 %%
@@ -82,25 +84,19 @@ program : //types MAIN '(' ')' block {Node::printTree($5, 0);printf("main\n");} 
          block {Node::printTree($1, 0);}
          | program block {Node::printTree($2, 0);}
         ;
-types: INT  {$$ = $1; printf("types INT\n"); }
-     | DOUBLE   {$$ = $1;}
-     | FLOAT    {$$ = $1;}
-     | CHAR {$$ = $1;}
-     | VOID {$$ = $1;}
-     | BOOL {$$ = $1;}
+types: INT  {$$ = $1; printf("types INT\n"); setTypes(Value_Type::type_int); setStatus(true);}
+     | DOUBLE   {$$ = $1; setTypes(Value_Type::type_double); setStatus(true);}
+     | FLOAT    {$$ = $1; setTypes(Value_Type::type_double); setStatus(true);}
+     | CHAR {$$ = $1; setTypes(Value_Type::type_char); setStatus(true);}
+     | VOID {$$ = $1; setTypes(Value_Type::type_void); setStatus(true);}
+     | BOOL {$$ = $1; setTypes(Value_Type::type_bool); setStatus(true);}
      //| types '*' { }
      ;
-block : '{' stmts '}' { 
-                        $$ = Node::createNode(new Node("Block"), $2);
-                        printf("block\n");
-                        }
+
+block : '{' stmts '}' {$$ = Node::createNode(new Node("Block"), $2);}
       ;
 stmts   : /* empty */ {$$ = new Node("NULL");}
-        | stmt {    
-                    //$$ = new Node("STMT");
-                    $$ = Node::createNode(new Node("STMT"), $1);
-                    printf("stmt\n");
-                }
+        | stmt {$$ = new Node("Stmts"); $$->addChildren($1);}
         | stmts stmt {$$ = $1; $$->addChildren($2);}
         ;
 stmt    : def_stmt ';'{$$ = $1;  printf("stmt def_stmt ;\n");}
@@ -109,21 +105,13 @@ stmt    : def_stmt ';'{$$ = $1;  printf("stmt def_stmt ;\n");}
         | do_while_stmt {$$ = $1;}
         | for_stmt {$$ = $1; printf("stmt for_stmt\n");}
         | return_stmt ';'{$$ = $1; printf("stmt return_stmt ;\n");}
+        //| error SEMICOLON { $$ = new GeneralNode(INVALID); yyerrok(); }
         | exprlist ';' {$$ = $1; printf("stmt exprlist ;\n");  }
         | block {$$ = $1; printf("stmt block \n"); }
-        | ';' { 
-                $$ = new Node("Empty Stmt"); 
-                printf("stmt just a ;\n"); 
-                }
+        | ';' {$$ = new Node("Empty Stmt"); printf("stmt just a ;\n"); }
         ;
-initlist: '{' exprlist '}' { 
-                                //$$ = Node::createNode(new ValueNode("Initlist", Value_Type::type_array), $2); 
-                                printf("initlist {list}\n"); 
-                                }
-        | '{' exprlist ',' '}' {
-                               // $$ = Node::createNode(new ValueNode("Initlist", Value_Type::type_array), $2);
-                                printf("initlist {list ,}\n");
-                                }
+initlist: '{' exprlist '}' { $$ = Node::createNode(new Node("Initlist"), $2); printf("initlist {list}\n"); }
+        | '{' exprlist ',' '}' {$$ = Node::createNode(new Node("Initlist"), $2);printf("initlist {list ,}\n");}
         ;
 exprlist: exprlist ',' expritem {$$ = $1; $$->addChildren($3);printf("exprlist , item\n"); }
         | expritem {    
@@ -133,11 +121,11 @@ exprlist: exprlist ',' expritem {$$ = $1; $$->addChildren($3);printf("exprlist ,
                         }
         ;
 expritem: expr {$$ = $1; printf("expritem : expr\n");}
-        //| varexpr  {$$ = $1;}
-        | initlist { //$$ = $1; 
+        | initlist { 
+                    //$$ = $1; 
         }
         ;
-vals:     INTEGER   {$$ = $1; printf("vals INTEGER %d name %s \n", $1->getValue(),$1->getName());}
+vals:     INTEGER   {$$ = $1; printf("vals INTEGER %d name %s type %d\n", $1->getValue(),$1->getName(), $1->getNodeType());}
         | DBL   {$$ = $1; printf("vals DBL %f\n", $1->getValue());}
         | CHR   {$$ = $1;printf("vals CHR %c\n", $1->getValue());}
         | STR   {$$ = $1;}
@@ -235,7 +223,8 @@ expr    : '(' expr ')' {    $$ = $2;
         | expr NEQ expr {   $$ = new ExprNode("!=", $1, $3);
                             $$->addChildren($1);  $$->addChildren($3);
                             }
-        | expr CMP expr {   $$ = new ExprNode($2, $1, $3);
+        | expr CMP expr {   
+                            $$ = new ExprNode($2, $1, $3);
                             $$->addChildren($1);  $$->addChildren($3);
          }
         | expr OR expr  {   $$ = new ExprNode("||", $1, $3);
@@ -296,29 +285,56 @@ ids     : varexpr {
                     printf("ids , varexpr\n");
                     }
         ;
-varexpr : var { $$ = $1;printf("varexpr var\n");}
+varexpr : var { 
+                    IDNode* symbol = handleVarExpr((IDNode*)$1);
+                    if(symbol == nullptr){
+                        yyerror("错了");
+                        $$ = new ValueNode("ERROR NODE");
+                    }else{
+                        $$ = symbol;
+                    }
+                        
+                    
+                    printf("varexpr var\n");
+                    }
         | var '=' expritem { 
-                            $$ = new ExprNode("=", $1, $3);
-                            $$->addChildren($1);  $$->addChildren($3);
-                            printf("varexpr: %d = %d\n", $1->getNodeType(), $3->getNodeType());
+                            // 检查重(未)定义, 返回找到的结果(未找到时插入符号表并返回传入参数)
+                            IDNode* symbol = handleVarExpr((IDNode*)$1);
+                             // $3 也可能未定义或未初始化，交给计算函数处理
+                            $$ = new ExprNode("=", symbol, $3); 
+                            $$->addChildren(symbol);  $$->addChildren($3);
                         }
         ;
-var     : ID {  
+var     : ID {
                 $$ = $1;
-                printf("var ID %s ,type: %d\n", $1->getName(), $1->getNodeType());
-                }
-        //| '*' var %prec '!' {}
-        | var '[' INTEGER ']' {  }
+                printf("var ID %s\n", $1->getName());
+             }
+        | var '[' INTEGER ']' {
+                                /*if(isDefining()){//声明语句
+                                    //把每一维空间大小压入进去
+                                    IDNode* idNode = (IDNode*)$1;//先转换成IDNode*
+                                    if(idNode->getValue()==nullptr){//如果没有初始化成员变量ValueNode就先初始化
+                                        ArrayNode* arrNode = new ArrayNode();
+                                        idNode->setValue(arrNode);
+                                    }
+                                    ArrayNode* arrNodeInUsed = (ArrayNode*)(idNode->getValue());
+                                    arrNodeInUsed->addSize($3->getValue());//压入当前维度的空间大小
+                                    vector<int>k = arrNodeInUsed->getSize();
+                                    $$ = idNode;//给$$赋值
+                                }
+                                else {//赋值语句
+                                    // $$ = $1->getChild($3->getValue());
+                                }*/
+                              }
         | var '[' ']' {}
         | '(' var ')' { $$ = $2; }
         ;
 def_stmt: types ids  { 
                         //Node *nodes[] = {new Node("Def_Stmt"), $1, $2};
                         //$$ = Node::createNode(new Node("Def_Stmt"), new Node("TEST"));
+                        setStatus(false);
                         $$ = Node::createNode(3, new Node("Def_Stmt"), $1, $2);
-                        printf("def_stmt types ids\n");
                      }
-        //| def_stmt ',' def_stmt    {printf("def_stmt second\n");}
         ;
 if_stmt      : IF '(' cond_args ')' stmt {
                     Node *cond = Node::createNode(new Node("If Condition"), $3);
@@ -376,6 +392,8 @@ int main(void)
     int n = 1;
     mylexer lexer;
     myparser parser;
+    //freopen("d:\\read.txt", "r", stdin);
+    //freopen("d:\\out.txt", "w", stdout);
     if (parser.yycreate(&lexer)) {
         if (lexer.yycreate(&parser)) {
             n = parser.yyparse();
@@ -383,3 +401,4 @@ int main(void)
     }
     return n;
 }
+

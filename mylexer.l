@@ -6,7 +6,6 @@
 #include <map>
 #include <stdlib.h>
 
-int lineno = 1;
 %}
 
 /////////////////////////////////////////////////////////////////////////////
@@ -59,9 +58,7 @@ kexue    ({integer}|{double})[e]{integer}
     YYSTYPE YYFAR& yylval = *(YYSTYPE YYFAR*)yyparserptr->yylvalptr;
 %}
 
-//%option yylineno
 // place your Lex rules here
-[\n]        {lineno++;}
 "main"      {return MAIN;}
 "if"        {return IF;}
 
@@ -144,35 +141,29 @@ kexue    ({integer}|{double})[e]{integer}
 
 {comment}   {}
 {str}      {yylval.str = new StringNode(yytext);return STR;}
-{chr}      {    
-                
+{chr}      {
                 yylval.char_n = new CharNode(yytext[1]); //TODO: \n \t !!
                 return CHR;
            }
-{integer}   {   yylval.int_n = new IntNode(atoi(yytext));
-                return INTEGER;}
-{double}    {   yylval.double_n = new DoubleNode(atof(yytext));
-                return DBL;
-                }
-"NULL"      {   yylval.int_n = new IntNode(NULL);
-                return NUL;
-                }
-"true"      {   yylval.int_n = new IntNode(1); 
-                return TRUE;
-                }
-"false"     {   yylval.int_n = new IntNode(0); 
-                return FALSE;}
+{integer}   {yylval.int_n = new IntNode(atoi(yytext));return INTEGER;}
+{double}    {yylval.double_n = new DoubleNode(atof(yytext));return DBL;}
+"NULL"          {yylval.str = new StringNode("NULL");return NUL;}
+"true"          {yylval.int_n = new IntNode(1); return TRUE;}
+"false"         {yylval.int_n = new IntNode(0); return FALSE;}
 {cmp}       {
-                char *name = new char[5];
-                strcpy_s(name, 5, yytext);
+                char *name = new char[LEN+1];
+                strcpy_s(name,LEN+1, yytext);
                 yylval.name = name;
                 return CMP;
             }
 
 {id}        {
                 char *name = new char[LEN];
-                strcpy_s(name, LEN+1, yytext);
+                strcpy_s(name,LEN+1,yytext);
+                int i = 10;
+                i++;
                 yylval.id_n = new IDNode(name, Value_Type::type_int, yylineno);
+               // addID(name, yylval.id_n);
                 return ID;
             }
 
@@ -183,3 +174,4 @@ kexue    ({integer}|{double})[e]{integer}
 
 /////////////////////////////////////////////////////////////////////////////
 // programs section
+
