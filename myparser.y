@@ -222,7 +222,9 @@ var     : ID {
 								//把每一维空间大小压入进去
 								IDNode* tmp = (IDNode*)$1;//先转换成IDNode*
 								ArrayNode* node = (ArrayNode*)tmp->getValue();//获取IDNode成员变量ValueNode*
+								cout<<"向下类型转换没出问题"<<endl;
 								node->addSize($3->value);//压入当前维度的空间大小
+								cout<<"压入空间大小没出问题"<<endl;
 								$$ = (ValueNode*)tmp;//给$$赋值
 							  }
         | var '[' ']' {}

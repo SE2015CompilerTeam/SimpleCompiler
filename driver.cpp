@@ -314,7 +314,7 @@ vector<int> ArrayNode::getSize() {
 }
 
 void ArrayNode::addSize(int tmp) {
-	this->getSize().push_back(tmp);
+	this->size.push_back(tmp);
 }
 
 void ArrayNode::addCount() {
@@ -369,5 +369,6 @@ bool hasID(string name) {
 }
 
 IDNode* getID(string name) {
+	cout << name << endl;
 	return idMap.find(name);
 }
