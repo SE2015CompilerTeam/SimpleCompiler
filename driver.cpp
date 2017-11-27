@@ -98,8 +98,11 @@ Node* Node::createNode(Node* root, Node* node) {
 
 void Node::addBrother(Node *bro) {
 	Node *cur = this;
-	while (cur->brother != NULL)
+	while (cur->brother != NULL){
+		if (cur == bro) // 不能添加自己为兄弟
+			return;
 		cur = cur->brother;
+	}
 	cur->brother = bro;
 }
 
@@ -350,7 +353,7 @@ ValueNode* ExprNode::calcBoolOpt(const char* type, ValueNode* node1, ValueNode* 
 		if (!strcmp(type, "!="))		return new IntNode(res1 != res2);
 		if (!strcmp(type, ">="))		return new IntNode(res1 >= res2);
 		if (!strcmp(type, "<="))		return new IntNode(res1 <= res2);
-		return ValueNode::ErrorNode();
+		return nullptr;
 	}
 	else{
 		ThrowERR(3);
@@ -557,7 +560,9 @@ ValueNode* ExprNode::calculate(const char* opt, ValueNode* n1, ValueNode* n2 = n
 				return ValueNode::ErrorNode();
 			}
 			// 先检查 指针/数组 赋值关系
-			if (n1 == n2)		return n2;
+			if (n1 == n2)		
+				return n1;
+			
 			((IDNode*)n1)->setValue(v2);
 			return (IDNode*)n1;
 		}
@@ -679,7 +684,7 @@ Node* ArrayNode::getChild(int i) {
 	}
 }
 ValueNode* ExprNode::setValue(ValueNode* node){
-	if (node != nullptr){
+	if (node != nullptr && this->tvalue != ValueNode::extractInterValue(node)){
 		if (this->tvalue != nullptr)
 			delete this->tvalue;//先清除原来的值
 		this->tvalue = ValueNode::extractInterValue(node);
