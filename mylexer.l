@@ -161,13 +161,8 @@ kexue    ({integer}|{double})[e]{integer}
                 char *name = new char[LEN];
                 strcpy_s(name,LEN+1,yytext);
                 string strName = name;
-                if(hasID(strName)){
-					yylval.id_n = getID(name);
-				}
-				else{
-					yylval.id_n = new IDNode(name, Value_Type::type_int, yylineno);
-					addID(name, yylval.id_n);
-				}
+  				yylval.id_n = new IDNode(name, Value_Type::type_int, yylineno);
+				addID(name, yylval.id_n);
                 return ID;
             }
 

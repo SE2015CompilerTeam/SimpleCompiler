@@ -200,24 +200,22 @@ varexpr : var { $$ = $1;printf("varexpr var\n");}
         ;
 var     : ID {
 				printf("var ID %s\n", $1->getName());
-				cout<<$1->getValueType()<<"yacc里匹配到ID"<<endl;
-				cout<<$1<<endl;
-				if(isDefining()){//如果是声明语句
-					if(isRedefined($1)){//检测是否重定义
+				string name = $1->getName();
+				IDNode* node = getID(name);
+				if(isDefining()){
+					if(isRedefined(node)){
 						cout<<endl<<"fuck redefined!"<<endl<<endl;
 					}
 					else{
-						setIDType($1);//设置id的value_type
-						cout<<endl<<"没有重定义"<<endl<<endl;
+						setIDType(node);
 					}
 				}
 				else{
-					cout<<"我进入了赋值语句的匹配"<<endl;
-					if(isUndefined($1)){//检测是否未定义
+					if(isUndefined(node)){
 						cout<<endl<<"fuck undefined!"<<endl<<endl;
 					}
 				}
-				$$ = $1;
+				$$ = node;
 			 }
         //| '*' var %prec '!' {}
         | var '[' INTEGER ']' {
