@@ -80,9 +80,7 @@ using namespace std;
 
 %start program
 %%
-program : //types MAIN '(' ')' block {Node::printTree($5, 0);printf("main\n");} // TODO: main args
-         block {Node::printTree($1, 0);}
-         | program block {Node::printTree($2, 0);}
+program : INT MAIN '(' ')' block {Node::printTree($5, 0);} // TODO: main args
         ;
 types: INT  {$$ = $1; printf("types INT\n"); setTypes(Value_Type::type_int); setStatus(true);}
      | DOUBLE   {$$ = $1; setTypes(Value_Type::type_double); setStatus(true);}
@@ -99,49 +97,48 @@ stmts   : /* empty */ {$$ = new Node("NULL");}
         | stmt {$$ = new Node("Stmts"); $$->addChildren($1);}
         | stmts stmt {$$ = $1; $$->addChildren($2);}
         ;
-stmt    : def_stmt ';'{$$ = $1;  printf("stmt def_stmt ;\n");}
-        | if_stmt {$$ = $1; printf("stmt if_stmt\n");}
-        | while_stmt {$$ = $1; printf("stmt while_stmt\n");}
+stmt    : def_stmt ';'{$$ = $1; }
+        | if_stmt {$$ = $1;}
+        | while_stmt {$$ = $1;}
         | do_while_stmt {$$ = $1;}
-        | for_stmt {$$ = $1; printf("stmt for_stmt\n");}
-        | return_stmt ';'{$$ = $1; printf("stmt return_stmt ;\n");}
+        | for_stmt {$$ = $1;}
+        | return_stmt ';'{$$ = $1; }
         //| error SEMICOLON { $$ = new GeneralNode(INVALID); yyerrok(); }
-        | exprlist ';' {$$ = $1; printf("stmt exprlist ;\n");  }
-        | block {$$ = $1; printf("stmt block \n"); }
+        | exprlist ';' {$$ = $1; }
+        | block {$$ = $1;}
         | READ '(' expr ')' ';' { 
-									$$ = $1;
-									ValueNode* temp = ValueNode::extractInterValue((ValueNode*)$3);
-									$1->name = new char[strlen(temp->getValue()) + 1];
-									strcpy_s($1->name, strlen(temp->getValue()) + 1,temp->getValue());
-									cout<<"stmt read_func"<<endl;
-								}
+                                    $$ = $1;
+                                    ValueNode* temp = ValueNode::extractInterValue((ValueNode*)$3);
+                                    $1->name = new char[strlen(temp->getValue()) + 1];
+                                    strcpy_s($1->name, strlen(temp->getValue()) + 1,temp->getValue());
+                                    
+                                }
         | WRITE '(' expr ')' ';'{ 
-									$$ = $1;
-									ValueNode* temp = ValueNode::extractInterValue((ValueNode*)$3);
-									$1->name = new char[strlen(temp->getValue()) + 1];
-									strcpy_s($1->name, strlen(temp->getValue()) + 1,temp->getValue());
-									cout<<"stmt write_func"<<endl;
-								}
-        | ';' {$$ = new Node("Empty Stmt"); printf("stmt just a ;\n"); }
+                                    $$ = $1;
+                                    ValueNode* temp = ValueNode::extractInterValue((ValueNode*)$3);
+                                    $1->name = new char[strlen(temp->getValue()) + 1];
+                                    strcpy_s($1->name, strlen(temp->getValue()) + 1,temp->getValue());
+                                   
+                                }
+        | ';' {$$ = new Node("Empty Stmt");  }
         ;
-initlist: '{' exprlist '}' {    $$ = Node::createNode(new Node("Initlist"), $2); printf("initlist {list}\n"); }
-        | '{' exprlist ',' '}' {$$ = Node::createNode(new Node("Initlist"), $2); printf("initlist {list ,}\n");}
+initlist: '{' exprlist '}' {    $$ = Node::createNode(new Node("Initlist"), $2);}
+        | '{' exprlist ',' '}' {$$ = Node::createNode(new Node("Initlist"), $2);}
         ;
-exprlist: exprlist ',' expritem {$$ = $1; $$->addChildren($3);printf("exprlist , item\n"); }
+exprlist: exprlist ',' expritem {$$ = $1; $$->addChildren($3);}
         | expritem {    
                         $$ = new Node("Expr List");
                         $$->addChildren($1);
-                        printf("exprlist item\n");
                         }
         ;
-expritem: expr {$$ = $1; printf("expritem : expr\n");}
+expritem: expr {$$ = $1; }
         | initlist { 
                     //$$ = $1; 
         }
         ;
-vals:     INTEGER   {$$ = $1; printf("vals INTEGER %d name %s type %d\n", $1->getValue(),$1->getName(), $1->getNodeType());}
-        | DBL   {$$ = $1; printf("vals DBL %f\n", $1->getValue());}
-        | CHR   {$$ = $1;printf("vals CHR %c\n", $1->getValue());}
+vals:     INTEGER   {$$ = $1;}
+        | DBL   {$$ = $1;}
+        | CHR   {$$ = $1;}
         | STR   {$$ = $1;}
         | TRUE  {$$ = $1;}
         | FALSE {$$ = $1;}
@@ -151,51 +148,51 @@ vals:     INTEGER   {$$ = $1; printf("vals INTEGER %d name %s type %d\n", $1->ge
         ;*/
 expr    : '(' expr ')' {    $$ = $2; 
                             ValueNode* v = ValueNode::extractInterValue($$);
-                            printf("(expr %s:%d %s)\n", $$->getName(),$$->getNodeType(), v->getValue());
+                            
                             }
         | expr PA  expr {
                             $$ = new ExprNode("+=", $1, $3);
                             $$->addChildren($1);  $$->addChildren($3);
-                            printf("%s += %s\n", $1->getName(), $3->getName());
+                           
                             }
         | expr MNA expr {   // 先计算expr值 再赋给左侧ID
                             $$ = new ExprNode("-=", $1, $3);
                             $$->addChildren($1);  $$->addChildren($3);
-                            printf("%s -= %s\n", $1->getName(), $3->getName());}
+                           }
         | expr MA  expr {   
                             $$ = new ExprNode("*=", $1, $3);
                             $$->addChildren($1);  $$->addChildren($3);
-                            printf("%s *= %s\n", $1->getName(), $3->getName());
+                           
                             }
         | expr DA  expr {   $$ = new ExprNode("/=", $1, $3);
                             $$->addChildren($1);  $$->addChildren($3);
-                            printf("%s -= %s\n", $1->getName(), $3->getName());
+                            
                             }
         | expr MOA expr {   $$ = new ExprNode("%=", $1, $3);
                             $$->addChildren($1);  $$->addChildren($3);
-                            printf("%s -= %s\n", $1->getName(), $3->getName());
+                          
                             }
         | expr ORA expr {   $$ = new ExprNode("|=", $1, $3);
                             $$->addChildren($1);  $$->addChildren($3);
-                            printf("%s |= %s\n", $1->getName(), $3->getName());
+                            
                             }
         | expr XORA expr{   $$ = new ExprNode("^=", $1, $3);
                             $$->addChildren($1);  $$->addChildren($3);
-                            printf("%s ^= %s\n", $1->getName(), $3->getName());
+                           
                             }
         | expr AA  expr {   $$ = new ExprNode("&=", $1, $3);
                             $$->addChildren($1);  $$->addChildren($3);
-                            printf("%s -= %s\n", $1->getName(), $3->getName());
+                            
                             }
         | expr '+' expr {  
                             $$ = new ExprNode("+", $1, $3);
                             $$->addChildren($1);  $$->addChildren($3);
-                            //printf("%s + %s\n", $1->getName(), $3->getName());
+                            
                             }
                             
         | expr '-' expr {   $$ = new ExprNode("-", $1, $3);
                             $$->addChildren($1);  $$->addChildren($3);
-                            printf("%s - %s\n", $1->getName(), $3->getName());}
+                           }
                             
         | expr '*' expr {   $$ = new ExprNode("*", $1, $3);
                             $$->addChildren($1);  $$->addChildren($3);
@@ -204,20 +201,20 @@ expr    : '(' expr ')' {    $$ = $2;
         | expr '/' expr {
                             $$ = new ExprNode("/", $1, $3);
                             $$->addChildren($1);  $$->addChildren($3);
-                            printf("%s / %s\n", $1->getName(), $3->getName());
+                            
                             }
                             
         | expr '%' expr {   $$ = new ExprNode("%", $1, $3);
                             $$->addChildren($1);  $$->addChildren($3);
-                            printf("%s % %s\n", $1->getName(), $3->getName());
+                           
                             }
         | expr LL expr  {   $$ = new ExprNode("<<", $1, $3);
                             $$->addChildren($1);  $$->addChildren($3);
-                            printf("%s << %s\n", $1->getName(), $3->getName());
+                         
                             }
         | expr RR expr  {   $$ = new ExprNode("<<", $1, $3);
                             $$->addChildren($1);  $$->addChildren($3);
-                            printf("%s << %s\n", $1->getName(), $3->getName());
+                            
                             }
         | expr '|' expr {   
                             $$ = new ExprNode("|", $1, $3);
@@ -232,7 +229,7 @@ expr    : '(' expr ')' {    $$ = $2;
                             }
         | expr EQ expr  {   $$ = new ExprNode("==", $1, $3);
                             $$->addChildren($1);  $$->addChildren($3);
-                            printf("Expr ==\n");
+                            
                             }
         | expr NEQ expr {   $$ = new ExprNode("!=", $1, $3);
                             $$->addChildren($1);  $$->addChildren($3);
@@ -247,12 +244,8 @@ expr    : '(' expr ')' {    $$ = $2;
         | expr AND expr {   $$ = new ExprNode("&&", $1, $3);
                             $$->addChildren($1);  $$->addChildren($3);
          }
-        /*| expr '=' expr {   $$ = new ExprNode("=", $1, $3);
-                            $$->addChildren($1);  $$->addChildren($3);
-                            printf("expr assign '=' : %s = %s\n", $1->getName(), $3->getName());}
-        */
         | PP expr  %prec RA{//$$ = $2;
-                            printf("+++ %s\n", $2->getName());
+                            
                             $$ = new ExprNode("+++", $2, nullptr);
                             $$->addChildren($2);
                         }
@@ -281,22 +274,22 @@ expr    : '(' expr ')' {    $$ = $2;
                         $$->addChildren($2);
         }
         | vals  {
-                    $$ = $1; printf("expr vals%s\n", $$->getName());
+                    $$ = $1;
                  //   $$ = new ValueNode("1234");
         }
         //| var   {$$ = $1;printf("expr ID \n");}
-        | varexpr {$$ = $1;printf("expr ID \n");}
+        | varexpr {$$ = $1;}
         //| MUL expr %prec UDEREF { }
         //| BITAND expr %prec UREF { }
         //| expr LBRACK expr RBRACK %prec SUB {}
         ;
 ids     : varexpr {
                     $$ = Node::createNode(new Node("ID List"), $1);
-                    printf("ids varexpr\n");
+                   
                     }
         | ids ',' varexpr {
                     $$ = $1; $$->addChildren($3);  
-                    printf("ids , varexpr\n");
+                   
                     }
         ;
 varexpr : var { 
@@ -306,7 +299,7 @@ varexpr : var {
                     }else{
                         $$ = symbol;
                     }
-                    printf("varexpr var\n");
+                    
                     }
         | var '=' expritem { 
                             // 检查重(未)定义, 返回找到的结果(未找到时插入符号表并返回传入参数)
@@ -325,7 +318,7 @@ varexpr : var {
         ;
 var     : ID {
                 $$ = $1;
-                printf("var ID %s\n", $1->getName());
+               
              }
         | var '[' INTEGER ']' {
                                 if(isDefining()){//声明语句
