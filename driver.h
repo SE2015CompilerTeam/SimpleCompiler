@@ -174,6 +174,10 @@ public:
 	int getLineNum();
 	//void setAutoFlag(bool needIncre);
 	ValueNode* setValue(ValueNode* n);
+	void mySetValue(ValueNode* n){ // 临时给数组加的
+		//this->value_type = n->getValueType();
+		this->tvalue = n;
+	}
 	//ValueNode* setValue(char* val, Value_Type type);
 	ValueNode* getValue();
 	static void printNode(Node* n);

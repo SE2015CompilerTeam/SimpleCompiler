@@ -43,7 +43,7 @@ using namespace std;
 %token<str>              STR
 %token<id_n>             ID
 %token<token>            PROC_CONTROL  ACCESS_CONTROL ERR_CONTROL USING NAMESPACE DEFINE
-%token<nodes>            READ WRITE 
+%token<str>              READ WRITE 
 %token<token>            CLASS RETURN NEW DEL THIS
 %token<token>            ';'
 %token<token>            '#'
@@ -108,10 +108,24 @@ stmt    : def_stmt ';'{$$ = $1;  printf("stmt def_stmt ;\n");}
         //| error SEMICOLON { $$ = new GeneralNode(INVALID); yyerrok(); }
         | exprlist ';' {$$ = $1; printf("stmt exprlist ;\n");  }
         | block {$$ = $1; printf("stmt block \n"); }
+        | READ '(' expr ')' ';' { 
+									$$ = $1;
+									ValueNode* temp = ValueNode::extractInterValue((ValueNode*)$3);
+									$1->name = new char[strlen(temp->getValue()) + 1];
+									strcpy_s($1->name, strlen(temp->getValue()) + 1,temp->getValue());
+									cout<<"stmt read_func"<<endl;
+								}
+        | WRITE '(' expr ')' ';'{ 
+									$$ = $1;
+									ValueNode* temp = ValueNode::extractInterValue((ValueNode*)$3);
+									$1->name = new char[strlen(temp->getValue()) + 1];
+									strcpy_s($1->name, strlen(temp->getValue()) + 1,temp->getValue());
+									cout<<"stmt write_func"<<endl;
+								}
         | ';' {$$ = new Node("Empty Stmt"); printf("stmt just a ;\n"); }
         ;
-initlist: '{' exprlist '}' { $$ = Node::createNode(new Node("Initlist"), $2); printf("initlist {list}\n"); }
-        | '{' exprlist ',' '}' {$$ = Node::createNode(new Node("Initlist"), $2);printf("initlist {list ,}\n");}
+initlist: '{' exprlist '}' {    $$ = Node::createNode(new Node("Initlist"), $2); printf("initlist {list}\n"); }
+        | '{' exprlist ',' '}' {$$ = Node::createNode(new Node("Initlist"), $2); printf("initlist {list ,}\n");}
         ;
 exprlist: exprlist ',' expritem {$$ = $1; $$->addChildren($3);printf("exprlist , item\n"); }
         | expritem {    
@@ -302,6 +316,7 @@ varexpr : var {
                                 $$ = new ValueNode("ERROR NODE");    
                             }
                             else{
+                                IDNode* idNode = (IDNode*)$1;
                                 $$ = new ExprNode("=", symbol, $3);
                                 $$->addChildren(symbol);  $$->addChildren($3);
                             }
@@ -313,21 +328,21 @@ var     : ID {
                 printf("var ID %s\n", $1->getName());
              }
         | var '[' INTEGER ']' {
-                                /*if(isDefining()){//声明语句
+                                if(isDefining()){//声明语句
                                     //把每一维空间大小压入进去
                                     IDNode* idNode = (IDNode*)$1;//先转换成IDNode*
                                     if(idNode->getValue()==nullptr){//如果没有初始化成员变量ValueNode就先初始化
                                         ArrayNode* arrNode = new ArrayNode();
-                                        idNode->setValue(arrNode);
+                                        idNode->mySetValue(arrNode);
                                     }
-                                    ArrayNode* arrNodeInUsed = (ArrayNode*)(idNode->getValue());
+                                    ValueNode* temp = idNode->getValue();
+                                    ArrayNode* arrNodeInUsed = (ArrayNode*) temp;
                                     arrNodeInUsed->addSize($3->getValue());//压入当前维度的空间大小
-                                    vector<int>k = arrNodeInUsed->getSize();
                                     $$ = idNode;//给$$赋值
                                 }
                                 else {//赋值语句
                                     // $$ = $1->getChild($3->getValue());
-                                }*/
+                                }
                               }
         | var '[' ']' {}
         | '(' var ')' { $$ = $2; }

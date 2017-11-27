@@ -178,7 +178,10 @@ void ValueNode::printNode(Node* n){
 	if (n != nullptr){
 		ValueNode *node = extractInterValue((ValueNode*)n);
 		cout.setf(ios::left);
-		cout << setw(PRTSPC) << "Value" << node->getValue() << endl;
+		if (node->getValueType() == Value_Type::type_string){
+			cout << setw(PRTSPC) << "Value" << node->getValue() << '(' << node->getName() << ')' << endl;
+		}else
+			cout << setw(PRTSPC) <<"Value" << node->getValue() << endl;
 	}
 }
 int IDNode::getLineNum(){
@@ -217,7 +220,7 @@ void IDNode::printNode(Node* n) {
 				IDNode* node = (IDNode*)n;
 				cout.setf(ios::left);
 				cout << setw(PRTSPC) << "VAR";
-				if (node->value_type == Value_Type::type_array) {
+				if (node->getValue()->getValueType() == Value_Type::type_array) {
 					ValueNode* valNode = node->getValue();
 					ArrayNode* arrNode = (ArrayNode*)valNode;
 					vector<int> size = arrNode->getSize();
@@ -281,6 +284,7 @@ ValueNode* IDNode::setValue(ValueNode* n){ // ÏÈ²»×öÀàÐÍ¼ì²é(¿ÉÒÔÓÃÓÒÖµ¼ì²é×óÖµ£
 		case Value_Type::type_double:	this->tvalue = new DoubleNode(*(DoubleNode*)v);	break;
 		case Value_Type::type_string:	this->tvalue = new StringNode(*(StringNode*)v);	break;
 		case Value_Type::type_pointer:	this->tvalue = new StringNode(*(StringNode*)v);	break;
+		case Value_Type::type_array:	this->tvalue = n;								break;
 		default:																		break;
 		}
 		return this;
