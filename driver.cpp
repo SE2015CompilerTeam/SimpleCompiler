@@ -11,6 +11,7 @@ static const char* ErrorMSG[] = {
 	"²»Ö§³ÖµÄ²Ù×÷ÊýÀàÐÍ",
 	"±í´ïÊ½±ØÐëÊÇ¿ÉÐÞ¸ÄµÄ×óÖµ",
 	"±í´ïÊ½È±ÉÙ×óÖµ",
+	"Ê¹ÓÃÁËÎ´³õÊ¼»¯µÄ»ò³õÊ¼»¯Îª¿ÕµÄ±êÊ¶·û"
 };
 
 bool isSimpleOpt(const char* name){
@@ -164,27 +165,40 @@ void IDNode::printNode(Node* n){
 	cout << setw(PRTSPC) << "VAR" << n->getName() << endl;
 }
 
+void IDNode::Increment(bool incre){
+	if (this->value != nullptr){
+		ValueNode* invisible_one = new IntNode(1); // ÁÙÊ±µÄ 1
+		ValueNode* first_res = ExprNode::calcSimpleOpt( incre? "+" : "-" ,this->value, invisible_one);
+		ExprNode::calculate("=", this, first_res);
+		delete invisible_one;
+		delete first_res;
+	}
+}
+
 // »á¸Ä±äidµÄÖµ,Ê¹Æä×ÔÔö(¼õ)1
-void IDNode::setAuto(bool isIncre = true){
-	ValueNode* invisible_one = new IntNode(1); // ÁÙÊ±µÄ 1
-	ValueNode* first_result = nullptr;
-	if (isIncre)
-		first_result = ExprNode::calcSimpleOpt("+", getValue(), invisible_one);
-	else
-		first_result = ExprNode::calcSimpleOpt("-", getValue(), invisible_one);
-	ExprNode::calculate("=", this, first_result);
-	delete invisible_one;
+ValueNode* IDNode::setAuto(bool isIncre = true, bool prefix = true){
+	ValueNode* res = nullptr;
+	if (prefix){ // ×ÔÔöºó·µ»ØÉî¿½±´¶ÔÏó
+		Increment(isIncre);
+		res = new ValueNode(this->value->getValue(), this->value_type);
+		return res;
+	}
+	else{ // ÏÈ·µ»ØÉî¿½±´¶ÔÏóÔÙ×ÔÔö
+		res = new ValueNode(this->value->getValue(), this->value_type);
+		Increment(isIncre);
+		return res;
+	}
 }
 
 void IDNode::updateValue(){
 	while (this->autoFlag != 0){
 		if (this->autoFlag > 0){// ×ÔÔö1
-			setAuto(true);
 			this->autoFlag -= 1;
+			setAuto(true);
 		}
 		else if (this->autoFlag < 0){// ×Ô¼õ1
-			setAuto(false);
 			this->autoFlag += 1;
+			setAuto(false);
 		}
 	}
 }
@@ -193,8 +207,9 @@ void IDNode::setAutoFlag(bool needIncre){ //ºó×º++
 	this->autoFlag += needIncre;
 }
 
+
 ValueNode* IDNode::getValue(){
-	updateValue();
+	//updateValue(); // ²»ÊÇÔÚÃ¿´ÎÄÃÖµµÃÊ±ºòupdate ! ÊÇÔÚÒ»ÌõÓï¾ä½áÊøÒÔºó£¡
 	return this->value;
 }
 
@@ -204,7 +219,7 @@ ValueNode* IDNode::setValue(ValueNode* n){ // ÏÈ²»×öÀàÐÍ¼ì²é(¿ÉÒÔÓÃÓÒÖµ¼ì²é×óÖµ£
 			delete this->value; // ÏÈÇå³ýÔ­À´±£ÁôµÄValue
 		ValueNode* v = ValueNode::extractInterValue(n);
 		switch (this->value_type)
-		{	 // Éî¿½±´.  TODO: Ö¸ÕëµÄ»°ÓÃÇ³¿½±´
+		{
 		case Value_Type::type_char: 	this->value = new CharNode(*(CharNode*)v);		break;
 		case Value_Type::type_int:		this->value = new IntNode(*(IntNode*)v);		break;
 		case Value_Type::type_float:	this->value = new FloatNode(*(FloatNode*)v);	break;
@@ -248,215 +263,260 @@ void Node::printTree(Node* node, int level){
 	}
 }
 
+void ValueNode::setValue(const char* val, Value_Type type = Value_Type::type_int){
+	this->value = new char[std::strlen(val) + 1];
+	strcpy_s(this->value, std::strlen(val) + 1, val);
+}
+
+bool ValueNode::checkValid(ValueNode* node){ // ½ÚµãÊÇ·ñÎª¿Õ»ò±êÊ¶·ûÓÐÃ»ÓÐ±»¸³Öµ
+	if (node != nullptr)
+		return extractInterValue(node) != nullptr;
+	return false;
+}
+
 ValueNode* ValueNode::extractInterValue(ValueNode *n){
 	ValueNode* res = n;
-	if (n->getNodeType() == Node_Type::node_id)
-		res = ((IDNode*)n)->getValue();
-	else if (n->getNodeType() == Node_Type::node_opt)
-		res = ((ExprNode*)n)->getValue();
+	if (n != nullptr){
+		if (n->getNodeType() == Node_Type::node_id)
+			res = ((IDNode*)n)->getValue();
+		else if (n->getNodeType() == Node_Type::node_opt)
+			res = ((ExprNode*)n)->getValue();
+	}
 	return res;
 }
 
 ValueNode* ExprNode::calcBoolOpt(const char* type, ValueNode* node1, ValueNode* node2){
 	// >, <, ==, !=
-	if (node1 == nullptr || node2 == nullptr){
+	/*if (node1 == nullptr || node2 == nullptr){
+		ThrowERR(3);
+		return nullptr;
+	}*/
+	if (ValueNode::checkValid(node1) && ValueNode::checkValid(node2)){
+		ValueNode *n1 = ValueNode::extractInterValue(node1), *n2 = ValueNode::extractInterValue(node2);
+		double res1 = atof(n1->getValue()), res2 = atof(n2->getValue());
+		if (!strcmp(type, ">"))		return new IntNode(res1 > res2);
+		if (!strcmp(type, "<"))		return new IntNode(res1 < res2);
+		if (!strcmp(type, "=="))		return new IntNode(res1 == res2);
+		if (!strcmp(type, "!="))		return new IntNode(res1 != res2);
+		if (!strcmp(type, ">="))		return new IntNode(res1 >= res2);
+		if (!strcmp(type, "<="))		return new IntNode(res1 <= res2);
+		return nullptr;
+	}
+	else{
 		ThrowERR(3);
 		return nullptr;
 	}
-	ValueNode *n1 = ValueNode::extractInterValue(node1), *n2 = ValueNode::extractInterValue(node2);
-	double res1 = atof(n1->getValue()), res2 = atof(n2->getValue());
-	if (!strcmp(type, ">"))		return new IntNode(res1 > res2);
-	if (!strcmp(type, "<"))		return new IntNode(res1 < res2);
-	if (!strcmp(type, "=="))		return new IntNode(res1 == res2);
-	if (!strcmp(type, "!="))		return new IntNode(res1 != res2);
-	if (!strcmp(type, ">="))		return new IntNode(res1 >= res2);
-	if (!strcmp(type, "<="))		return new IntNode(res1 <= res2);
-	return nullptr;
 }
 
+// Ö»ÓÐ ¸³ÖµÔËËã ¿ÉÒÔ²»¼ì²éÖµÊÇ·ñÎª¿Õ
 ValueNode* ExprNode::calcSimpleOpt(const char* name, ValueNode* node1, ValueNode* node2){
 	if (!isSimpleOpt(name)){
 		return nullptr;
 	}
-	ValueNode *n1 = ValueNode::extractInterValue(node1), *n2 = ValueNode::extractInterValue(node2);
-	if (false){ // TODO: ÏÈÅÐ¶ÏÊÇ·ñÓÐÖ¸Õë »ò Êý×é
+	if (checkValid(node1) && checkValid(node2)){
+		ValueNode *n1 = ValueNode::extractInterValue(node1), *n2 = ValueNode::extractInterValue(node2);
+		if (n1 == nullptr || n2 == nullptr){
+			ThrowERR(4);
+		}
+		if (false){ // TODO: ÏÈÅÐ¶ÏÊÇ·ñÓÐÖ¸Õë »ò Êý×é
+		}
+		else {
+			ValueNode *res = calcBoolOpt(name, n1, n2);
+			if (res != nullptr){
+				return res;
+			}
+			if (n1->getValueType() == Value_Type::type_double
+				|| n2->getValueType() == Value_Type::type_double) // ÈÎºÎ±í´ïÊ½ Ö»Òªº¬double ÄÇ½á¹û¾ÍÊÇ double
+			{
+				DoubleNode* dn = nullptr;
+				if (name == "*")  dn = new DoubleNode(atof(n1->getValue()) * atof(n2->getValue()));
+				else if (name == "/")  dn = new DoubleNode(atof(n1->getValue()) / atof(n2->getValue()));
+				else if (name == "+")  dn = new DoubleNode(atof(n1->getValue()) + atof(n2->getValue()));
+				else if (name == "-")  dn = new DoubleNode(atof(n1->getValue()) - atof(n2->getValue()));
+				else if (name == "&&") dn = new DoubleNode(atof(n1->getValue()) && atof(n2->getValue()));
+				else if (name == "||") dn = new DoubleNode(atof(n1->getValue()) || atof(n2->getValue()));
+				else ThrowERR(1); // ²»Ö§³ÖµÄ²Ù×÷ÊýÀàÐÍ
+				return dn;
+			}
+			else if (n1->getValueType() == Value_Type::type_float
+				|| n2->getValueType() == Value_Type::type_float)
+			{
+				FloatNode* dn = nullptr;
+				if (name == "*")	  dn = new FloatNode(atof(n1->getValue()) * atof(n2->getValue()));
+				else if (name == "/") dn = new FloatNode(atof(n1->getValue()) / atof(n2->getValue()));
+				else if (name == "+") dn = new FloatNode(atof(n1->getValue()) + atof(n2->getValue()));
+				else if (name == "-") dn = new FloatNode(atof(n1->getValue()) - atof(n2->getValue()));
+				else if (name == "&&") dn = new FloatNode(atof(n1->getValue()) && atof(n2->getValue()));
+				else if (name == "||") dn = new FloatNode(atof(n1->getValue()) || atof(n2->getValue()));
+				else ThrowERR(1); // ²»Ö§³ÖµÄ²Ù×÷ÊýÀàÐÍ
+				return dn;
+			}
+			else if (n1->getValueType() == Value_Type::type_int
+				|| n2->getValueType() == Value_Type::type_int)
+			{
+				IntNode* dn = nullptr;
+				if (name == "*")	   dn = new IntNode(atoi(n1->getValue()) * atoi(n2->getValue()));
+				else if (name == "/")  dn = new IntNode(atoi(n1->getValue()) / atoi(n2->getValue()));
+				else if (name == "+")  dn = new IntNode(atoi(n1->getValue()) + atoi(n2->getValue()));
+				else if (name == "-")  dn = new IntNode(atoi(n1->getValue()) - atoi(n2->getValue()));
+				else if (name == "%")  dn = new IntNode(atoi(n1->getValue()) % atoi(n2->getValue()));
+				else if (name == "|")  dn = new IntNode(atoi(n1->getValue()) | atoi(n2->getValue()));
+				else if (name == "&")  dn = new IntNode(atoi(n1->getValue()) & atoi(n2->getValue()));
+				else if (name == "^")  dn = new IntNode(atoi(n1->getValue()) ^ atoi(n2->getValue()));
+				else if (name == "<<") dn = new IntNode(atoi(n1->getValue()) >> atoi(n2->getValue()));
+				else if (name == ">>") dn = new IntNode(atoi(n1->getValue()) >> atoi(n2->getValue()));
+				else if (name == "&&") dn = new IntNode(atoi(n1->getValue()) && atoi(n2->getValue()));
+				else if (name == "||") dn = new IntNode(atoi(n1->getValue()) || atoi(n2->getValue()));
+				else ThrowERR(1); // ²»Ö§³ÖµÄ²Ù×÷ÊýÀàÐÍ
+				return dn;
+			}
+			else if (n1->getValueType() == Value_Type::type_char
+				|| n2->getValueType() == Value_Type::type_char)
+			{
+				CharNode* dn = nullptr;
+				if (name == "*")	   dn = new CharNode(atoi(n1->getValue()) *  atoi(n2->getValue()));
+				else if (name == "/")  dn = new CharNode(atoi(n1->getValue()) / atoi(n2->getValue()));
+				else if (name == "+")  dn = new CharNode(atoi(n1->getValue()) + atoi(n2->getValue()));
+				else if (name == "-")  dn = new CharNode(atoi(n1->getValue()) - atoi(n2->getValue()));
+				else if (name == "%")  dn = new CharNode(atoi(n1->getValue()) % atoi(n2->getValue()));
+				else if (name == "|")  dn = new CharNode(atoi(n1->getValue()) | atoi(n2->getValue()));
+				else if (name == "&")  dn = new CharNode(atoi(n1->getValue()) &  atoi(n2->getValue()));
+				else if (name == "^")  dn = new CharNode(atoi(n1->getValue()) ^ atoi(n2->getValue()));
+				else if (name == "<<") dn = new CharNode(atoi(n1->getValue()) << atoi(n2->getValue()));
+				else if (name == ">>") dn = new CharNode(atoi(n1->getValue()) >> atoi(n2->getValue()));
+				else if (name == "&&") dn = new CharNode(atoi(n1->getValue()) && atoi(n2->getValue()));
+				else if (name == "||") dn = new CharNode(atoi(n1->getValue()) || atoi(n2->getValue()));
+				else ThrowERR(1); // ²»Ö§³ÖµÄ²Ù×÷ÊýÀàÐÍ
+				return dn;
+			}
+		}
 	}
-	else {
-		ValueNode *res = calcBoolOpt(name, n1, n2);
-		if (res != nullptr){
-			return res;
-		}
-		if (n1->getValueType() == Value_Type::type_double
-			|| n2->getValueType() == Value_Type::type_double) // ÈÎºÎ±í´ïÊ½ Ö»Òªº¬double ÄÇ½á¹û¾ÍÊÇ double
-		{
-			DoubleNode* dn = nullptr;
-			if (name == "*")  dn = new DoubleNode(atof(n1->getValue()) * atof(n2->getValue()));
-			else if (name == "/")  dn = new DoubleNode(atof(n1->getValue()) / atof(n2->getValue()));
-			else if (name == "+")  dn = new DoubleNode(atof(n1->getValue()) + atof(n2->getValue()));
-			else if (name == "-")  dn = new DoubleNode(atof(n1->getValue()) - atof(n2->getValue()));
-			else if (name == "&&") dn = new DoubleNode(atof(n1->getValue()) && atof(n2->getValue()));
-			else if (name == "||") dn = new DoubleNode(atof(n1->getValue()) || atof(n2->getValue()));
-			else ThrowERR(1); // ²»Ö§³ÖµÄ²Ù×÷ÊýÀàÐÍ
-			return dn;
-		}
-		else if (n1->getValueType() == Value_Type::type_float
-			|| n2->getValueType() == Value_Type::type_float)
-		{
-			FloatNode* dn = nullptr;
-			if (name == "*")	  dn = new FloatNode(atof(n1->getValue()) * atof(n2->getValue()));
-			else if (name == "/") dn = new FloatNode(atof(n1->getValue()) / atof(n2->getValue()));
-			else if (name == "+") dn = new FloatNode(atof(n1->getValue()) + atof(n2->getValue()));
-			else if (name == "-") dn = new FloatNode(atof(n1->getValue()) - atof(n2->getValue()));
-			else if (name == "&&") dn = new FloatNode(atof(n1->getValue()) && atof(n2->getValue()));
-			else if (name == "||") dn = new FloatNode(atof(n1->getValue()) || atof(n2->getValue()));
-			else ThrowERR(1); // ²»Ö§³ÖµÄ²Ù×÷ÊýÀàÐÍ
-			return dn;
-		}
-		else if (n1->getValueType() == Value_Type::type_int
-			|| n2->getValueType() == Value_Type::type_int)
-		{
-			IntNode* dn = nullptr;
-			if (name == "*")	   dn = new IntNode(atoi(n1->getValue()) * atoi(n2->getValue()));
-			else if (name == "/")  dn = new IntNode(atoi(n1->getValue()) / atoi(n2->getValue()));
-			else if (name == "+")  dn = new IntNode(atoi(n1->getValue()) + atoi(n2->getValue()));
-			else if (name == "-")  dn = new IntNode(atoi(n1->getValue()) - atoi(n2->getValue()));
-			else if (name == "%")  dn = new IntNode(atoi(n1->getValue()) % atoi(n2->getValue()));
-			else if (name == "|")  dn = new IntNode(atoi(n1->getValue()) | atoi(n2->getValue()));
-			else if (name == "&")  dn = new IntNode(atoi(n1->getValue()) & atoi(n2->getValue()));
-			else if (name == "^")  dn = new IntNode(atoi(n1->getValue()) ^ atoi(n2->getValue()));
-			else if (name == "<<") dn = new IntNode(atoi(n1->getValue()) >> atoi(n2->getValue()));
-			else if (name == ">>") dn = new IntNode(atoi(n1->getValue()) >> atoi(n2->getValue()));
-			else if (name == "&&") dn = new IntNode(atoi(n1->getValue()) && atoi(n2->getValue()));
-			else if (name == "||") dn = new IntNode(atoi(n1->getValue()) || atoi(n2->getValue()));
-			else ThrowERR(1); // ²»Ö§³ÖµÄ²Ù×÷ÊýÀàÐÍ
-			return dn;
-		}
-		else if (n1->getValueType() == Value_Type::type_char
-			|| n2->getValueType() == Value_Type::type_char)
-		{
-			CharNode* dn = nullptr;
-			if (name == "*")	   dn = new CharNode(atoi(n1->getValue()) *  atoi(n2->getValue()));
-			else if (name == "/")  dn = new CharNode(atoi(n1->getValue()) / atoi(n2->getValue()));
-			else if (name == "+")  dn = new CharNode(atoi(n1->getValue()) + atoi(n2->getValue()));
-			else if (name == "-")  dn = new CharNode(atoi(n1->getValue()) - atoi(n2->getValue()));
-			else if (name == "%")  dn = new CharNode(atoi(n1->getValue()) % atoi(n2->getValue()));
-			else if (name == "|")  dn = new CharNode(atoi(n1->getValue()) | atoi(n2->getValue()));
-			else if (name == "&")  dn = new CharNode(atoi(n1->getValue()) &  atoi(n2->getValue()));
-			else if (name == "^")  dn = new CharNode(atoi(n1->getValue()) ^ atoi(n2->getValue()));
-			else if (name == "<<") dn = new CharNode(atoi(n1->getValue()) << atoi(n2->getValue()));
-			else if (name == ">>") dn = new CharNode(atoi(n1->getValue()) >> atoi(n2->getValue()));
-			else if (name == "&&") dn = new CharNode(atoi(n1->getValue()) && atoi(n2->getValue()));
-			else if (name == "||") dn = new CharNode(atoi(n1->getValue()) || atoi(n2->getValue()));
-			else ThrowERR(1); // ²»Ö§³ÖµÄ²Ù×÷ÊýÀàÐÍ
-			return dn;
-		}
+	else{
+		ThrowERR(4);
+		return nullptr;
 	}
+	
 }
 
 ValueNode* ExprNode::calculate(const char* name, ValueNode* n1, ValueNode* n2 = nullptr){
-	ValueNode *v1 = ValueNode::extractInterValue(n1), *v2 = ValueNode::extractInterValue(n2); // ÓÃÀ´ÌáÈ¡ID ExprµÄÖµ
+	ValueNode *v1 = ValueNode::extractInterValue(n1);
+	ValueNode *v2 = ValueNode::extractInterValue(n2); // ÓÃÀ´ÌáÈ¡ID ExprµÄÖµ
 	if (n2 == nullptr){
 		// µ¥Ä¿ÔËËã·û ¸ººÅ  ! È¡µØÖ· Ç°++ -- ºó++ -- ~(È¡·´)
-		if (name == "-"){
-			IntNode* zero = new IntNode(0); // ·ûºÅÁÙÊ±±äÎª 0 - ID
-			ValueNode* res = calcSimpleOpt("-", zero, v2);
-			delete zero;
-			return res;
+		if (v1 == nullptr){
+			// ±êÊ¶·û»¹Î´³õÊ¼»¯
+			ThrowERR(4);
+			return nullptr;
 		}
-		else if (name == "!"){
-			switch (v1->getValueType())
-			{
-			case Value_Type::type_char: 	return  new CharNode(!atoi(v1->getValue()));		break;
-			case Value_Type::type_int:		return  new IntNode(!atoi(v1->getValue()));		break;
-			case Value_Type::type_float:	return  new FloatNode(!atof(v1->getValue()));	break;
-			case Value_Type::type_double:	return  new DoubleNode(!atof(v1->getValue()));	break;
-			case Value_Type::type_string:
-			case Value_Type::type_pointer:
-			default:
-				ThrowERR(2);
+		else{
+			if (name == "-"){
+				IntNode* zero = new IntNode(0); // ·ûºÅÁÙÊ±±äÎª 0 - ID
+				ValueNode* res = calcSimpleOpt("-", zero, v1);
+				delete zero;
+				return res;
 			}
-		}
-		else if (name == "~"){
-			switch (v1->getValueType())
-			{
-			case Value_Type::type_char: 	return  new CharNode(~atoi(v1->getValue()));		break;
-			case Value_Type::type_int:		return  new IntNode(~atoi(v1->getValue()));		break;
-			case Value_Type::type_float:
-			case Value_Type::type_double:
-			case Value_Type::type_string:
-			case Value_Type::type_pointer:
-			default:
-				ThrowERR(2);
+			else if (name == "!"){
+				switch (v1->getValueType())
+				{
+				case Value_Type::type_char: 	return  new CharNode(!atoi(v1->getValue()));		break;
+				case Value_Type::type_int:		return  new IntNode(!atoi(v1->getValue()));		break;
+				case Value_Type::type_float:	return  new FloatNode(!atof(v1->getValue()));	break;
+				case Value_Type::type_double:	return  new DoubleNode(!atof(v1->getValue()));	break;
+				case Value_Type::type_string:
+				case Value_Type::type_pointer:
+				default:
+					ThrowERR(2);
+				}
 			}
-			// ×ÔÔöÔËËã·µ»ØµÄÊÇID±¾Éí(È¡µØÖ·Öµ¿ÉÖ¤Ã÷..)
-		}
-		else if (name == "+++"){ // Ç°×º Ò²Í¬Ö®Ç°Ò»ÑùÐèÒª´´½¨½Úµã²¢·µ»Ø, Ö»ÊÇ´´½¨²¢¸³ÖµºóÒª¸ü¸Ä×ÔÉí(+1)
-			//  ++a => a+=1 => a = a + 1
-			if (n1->getNodeType() == Node_Type::node_id){ // Ö»ÓÐid²ÅÄÜ×ÔÔö ÀàËÆ¸³Öµ·ûºÅ
-				((IDNode*)n1)->setAuto();
-				return new IDNode(*(IDNode*)n1);
+			else if (name == "~"){
+				switch (v1->getValueType())
+				{
+				case Value_Type::type_char: 	return  new CharNode(~atoi(v1->getValue()));		break;
+				case Value_Type::type_int:		return  new IntNode(~atoi(v1->getValue()));		break;
+				case Value_Type::type_float:
+				case Value_Type::type_double:
+				case Value_Type::type_string:
+				case Value_Type::type_pointer:
+				default:
+					ThrowERR(2);
+				}
+				// ×ÔÔöÔËËã·µ»ØµÄÊÇID±¾Éí(È¡µØÖ·Öµ¿ÉÖ¤Ã÷..)
 			}
-			else
+			else if (name == "+++"){ // Ç°×º Ò²Í¬Ö®Ç°Ò»ÑùÐèÒª´´½¨½Úµã²¢·µ»Ø, Ö»ÊÇ´´½¨²¢¸³ÖµºóÒª¸ü¸Ä×ÔÉí(+1)
+				//  ++a => a+=1 => a = a + 1
+				if (n1->getNodeType() == Node_Type::node_id){ // Ö»ÓÐid²ÅÄÜ×ÔÔö ÀàËÆ¸³Öµ·ûºÅ
+					return ((IDNode*)n1)->setAuto(true, true);
+					//return new IDNode(*(IDNode*)n1);
+				}
+				else
+					//ThrowERR(1);
+					return nullptr;
+			}
+			else if (name == "---"){
+				if (n1->getNodeType() == Node_Type::node_id){
+					return ((IDNode*)n1)->setAuto(false, true);
+					//return new IDNode(*(IDNode*)n1);
+				}
+				else
+					return nullptr;
 				//ThrowERR(1);
-				return nullptr;
-		}
-		else if (name == "---"){
-			if (n1->getNodeType() == Node_Type::node_id){
-				((IDNode*)n1)->setAuto(false);
-				return new IDNode(*(IDNode*)n1);
 			}
-			else
-				return nullptr;
-			//ThrowERR(1);
-		}
-		else if (name == "++"){
-			if (n1->getNodeType() == Node_Type::node_id){
-				((IDNode*)n1)->setAutoFlag(true);//Ôö
-				return new IDNode(*(IDNode*)n1);
+			else if (name == "++"){
+				if (n1->getNodeType() == Node_Type::node_id){
+					return ((IDNode*)n1)->setAuto(true, false);
+				}
+				else
+					return nullptr;
+				//ThrowERR(1);
 			}
-			else
-				return nullptr;
-			//ThrowERR(1);
-		}
-		else if (name == "--"){
-			if (n1->getNodeType() == Node_Type::node_id){
-				((IDNode*)n1)->setAutoFlag(false);
-				return new IDNode(*(IDNode*)n1);
+			else if (name == "--"){
+				if (n1->getNodeType() == Node_Type::node_id){
+					return ((IDNode*)n1)->setAuto(true, false);
+				}
+				else
+					return nullptr;
+				//ThrowERR(1);
 			}
-			else
-				return nullptr;
-			//ThrowERR(1);
 		}
 	}
 	else{
 		if (name == "="){
-			if (n1->getNodeType() != Node_Type::node_id)
+			if (n1->getNodeType() != Node_Type::node_id){
+				ThrowERR(2);
 				return nullptr;
-			//ThrowERR(3);
+			}
 			// ÏÈ¼ì²é Ö¸Õë/Êý×é ¸³Öµ¹ØÏµ
-			return n1 == n2 ? n1 : ((IDNode*)n1)->setValue(v2);
+			if (n1 == n2)		return n2;
+			((IDNode*)n1)->setValue(v2);
+			return n1;
 		}
 		else{
-			if (isSimpleOpt(name)){
-				return calcSimpleOpt(name, v1, v2);
+			if (v1 == nullptr){
+				ThrowERR(4);
+				return nullptr;
 			}
 			else{
-				if (n1->getNodeType() != Node_Type::node_id) // TODO:Êý×éÒ²¿ÉÒÔ×ö×óÖµ
-					ThrowERR(3);
-				ValueNode* first_result = nullptr;
-				if (name == "+=")			first_result = calculate("+", n1, n2);
-				else if (name == "-=")		first_result = calculate("-", n1, n2);
-				else if (name == "*=")		first_result = calculate("*", n1, n2);
-				else if (name == "/=")		first_result = calculate("/", n1, n2);
-				else if (name == "%=")		first_result = calculate("%", n1, n2);
-				else if (name == "&=")		first_result = calculate("&", n1, n2);
-				else if (name == "|=")		first_result = calculate("|", n1, n2);
-				else if (name == "^=")		first_result = calculate("^", n1, n2);
-				else {
-					cout << "²»Ö§³ÖµÄÔËËã·û" << endl;
-					return nullptr; //throw new myOptFault("²»Ö§³ÖµÄ×éºÏÔËËã·û");
+				if (isSimpleOpt(name)){
+					return calcSimpleOpt(name, v1, v2);
 				}
-				return calculate("=", n1, first_result);
+				else{
+					if (n1->getNodeType() != Node_Type::node_id) // TODO:Êý×éÒ²¿ÉÒÔ×ö×óÖµ
+						ThrowERR(3);
+					ValueNode* first_result = nullptr;
+					if (name == "+=")			first_result = calculate("+", n1, n2);
+					else if (name == "-=")		first_result = calculate("-", n1, n2);
+					else if (name == "*=")		first_result = calculate("*", n1, n2);
+					else if (name == "/=")		first_result = calculate("/", n1, n2);
+					else if (name == "%=")		first_result = calculate("%", n1, n2);
+					else if (name == "&=")		first_result = calculate("&", n1, n2);
+					else if (name == "|=")		first_result = calculate("|", n1, n2);
+					else if (name == "^=")		first_result = calculate("^", n1, n2);
+					else {
+						cout << "²»Ö§³ÖµÄÔËËã·û" << endl;
+						return nullptr; //throw new myOptFault("²»Ö§³ÖµÄ×éºÏÔËËã·û");
+					}
+					return calculate("=", n1, first_result);
+				}
 			}
 		}
 	}
@@ -466,7 +526,7 @@ ValueNode* ExprNode::setValue(ValueNode* node){
 	if (node != nullptr){
 		if (this->tvalue != nullptr)
 			delete this->tvalue;//ÏÈÇå³ýÔ­À´µÄÖµ
-		this->tvalue = node;
+		this->tvalue = ValueNode::extractInterValue(node);
 		this->value_type = node->getValueType();
 		return this;
 	}

@@ -133,6 +133,7 @@ exprlist: exprlist ',' expritem {$$ = $1; $$->addChildren($3);printf("exprlist ,
                         }
         ;
 expritem: expr {$$ = $1; printf("expritem : expr\n");}
+        //| varexpr  {$$ = $1;}
         | initlist { //$$ = $1; 
         }
         ;
@@ -247,11 +248,12 @@ expr    : '(' expr ')' {    $$ = $2;
                             $$->addChildren($1);  $$->addChildren($3);
                             printf("expr assign '=' : %s = %s\n", $1->getName(), $3->getName());}
         */
-        | PP expr  %prec '!' {//$$ = $2;
+        | PP expr  %prec RA{//$$ = $2;
+                            printf("+++ %s\n", $2->getName());
                             $$ = new ExprNode("+++", $2, nullptr);
                             $$->addChildren($2);
                         }
-        | MM expr  %prec '!' {
+        | MM expr  %prec RA{
                             $$ = new ExprNode("---", $2, nullptr);
                             $$->addChildren($2);
                         }
@@ -259,22 +261,28 @@ expr    : '(' expr ')' {    $$ = $2;
                             $$ = new ExprNode("-", $2, nullptr);
                             $$->addChildren($2);}
         | expr PP{      
-                       // $$ = Node::createNode(new Node("++", Node_Type::node_opt), $1);
+                        $$ = new ExprNode("++", $1, nullptr);
+                        $$->addChildren($1);
                        // printf("expr PP\n");
-                             }
-        | expr MM{//$$ = Node::createNode(new Node("--", Node_Type::node_opt), $1);
-        }
+                    }
+        | expr MM{      
+                        $$ = new ExprNode("++", $1, nullptr);
+                        $$->addChildren($1);
+                    }
         | '!' expr {    
-                        //$$ = $2;
+                        $$ = new ExprNode("!", $2, nullptr);
+                        $$->addChildren($2);
                         } // TODO: temp..
-        | '~' expr {    //$$ = Node::createNode(new Node("~", Node_Type::node_opt), $2);
+        | '~' expr {  
+                        $$ = new ExprNode("~", $2, nullptr);
+                        $$->addChildren($2);
         }
         | vals  {
                     $$ = $1; printf("expr vals%s\n", $$->getName());
                  //   $$ = new ValueNode("1234");
         }
-        | var   {$$ = $1;printf("expr ID \n");}
-        //| {}
+        //| var   {$$ = $1;printf("expr ID \n");}
+        | varexpr {$$ = $1;printf("expr ID \n");}
         //| MUL expr %prec UDEREF { }
         //| BITAND expr %prec UREF { }
         //| expr LBRACK expr RBRACK %prec SUB {}
@@ -289,21 +297,15 @@ ids     : varexpr {
                     }
         ;
 varexpr : var { $$ = $1;printf("varexpr var\n");}
-        | var '=' expr { 
+        | var '=' expritem { 
                             $$ = new ExprNode("=", $1, $3);
                             $$->addChildren($1);  $$->addChildren($3);
-                            printf("varexpr: var = expr\n");
-                        }
-        | var '=' initlist {
-                            
-                           /*ExprNode::calculate("=", $1, $3);
-                            $$ = $1;
-                            printf("varexpr: var = initlist\n");*/
+                            printf("varexpr: %d = %d\n", $1->getNodeType(), $3->getNodeType());
                         }
         ;
 var     : ID {  
                 $$ = $1;
-                printf("var ID %s\n", $1->getName());
+                printf("var ID %s ,type: %d\n", $1->getName(), $1->getNodeType());
                 }
         //| '*' var %prec '!' {}
         | var '[' INTEGER ']' {  }

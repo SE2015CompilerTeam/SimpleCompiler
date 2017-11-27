@@ -56,6 +56,7 @@ protected:
 public:
 	ValueNode() :Node("Value", Node_Type::node_value){
 		this->value_type = Value_Type::type_int;
+		this->value = nullptr;
 	}
 
 	ValueNode(const char* value, Value_Type value_type = Value_Type::type_int) :Node("Value", Node_Type::node_value){
@@ -82,6 +83,7 @@ public:
 	static bool checkValueType(Value_Type t1, Value_Type t2);
 	static bool checkValueType(char* opt, Value_Type t1, Value_Type t2);
 	static bool checkValueType(char* opt, ValueNode* t1, ValueNode* t2);
+	static bool checkValid(ValueNode* node);
 	static ValueNode* extractInterValue(ValueNode* n);
 };
 
@@ -148,11 +150,11 @@ class IDNode : public ValueNode{ // ID的类型定义好后就不会再变,故可直接继承
 	int autoFlag = 0; // 后缀++ 的标志位
 	void updateValue();
 public:
-	IDNode(char* name, Value_Type type = Value_Type::type_int, int linenum = 1) : ValueNode(name, type){
+	IDNode(char* name, Value_Type type = Value_Type::type_int, int linenum = 1) : ValueNode("", name, type){
 		this->linenum = linenum;
 		this->type = Node_Type::node_id;
 		autoFlag = 0;
-		//临时加的 之后要检查符号表
+		//临时加的 之后要检查符号表 TODO:
 		this->value = new IntNode(999);
 	}
 	void setAutoFlag(bool needIncre);
@@ -160,7 +162,8 @@ public:
 	//ValueNode* setValue(char* val, Value_Type type);
 	ValueNode* getValue();
 	static void printNode(Node* n);
-	void setAuto(bool isIncre);
+	ValueNode* setAuto(bool isIncre, bool prefix);
+	void Increment(bool incre);
 };
 
 class ExprNode : public ValueNode{
