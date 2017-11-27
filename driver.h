@@ -11,7 +11,7 @@
 #define LEN 1024
 
 enum Node_Type { node_norm, node_value, node_id, node_opt, node_type, node_array };
-enum Value_Type { type_int = 10, type_char, type_double, type_string/* char* */, type_void, type_bool , type_array, type_pointer};
+enum Value_Type { type_int = 10, type_char, type_double, type_string/* char* */, type_void, type_bool, type_array, type_pointer };
 //vector<
 
 //map<Value_Type, ValueVec*> TypeMap;
@@ -147,7 +147,7 @@ public:
 		this->value = n;
 	}
 	ValueNode* getValue() {
-		return value;
+		return this->value;
 	}
 	static void printNode(Node* n);
 };
@@ -174,7 +174,7 @@ private:
 public:
 	int getDimension();
 	void setDimension(int i);
-	std::vector<int> getSize(); 
+	std::vector<int> getSize();
 	void addSize(int tmp); //添加提升维度时把维度的大小添加进去
 	void addCount(); //当前维度空间加一
 	static void printNode(Node* n);

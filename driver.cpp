@@ -148,7 +148,21 @@ void ValueNode::printNode(Node* n) {
 void IDNode::printNode(Node* n) {
 	try {
 		checkNodeType(n, Node_Type::node_id);
-		printf("VAR    %s\n", n->name);
+		ValueNode* tmp = (ValueNode*)n;
+		IDNode* node = (IDNode*)tmp;
+		if (node->value_type == Value_Type::type_array) {
+			ValueNode* valNode = node->getValue();
+			ArrayNode* arrNode = (ArrayNode*)valNode;
+			vector<int> size = arrNode->getSize();
+			cout << n->name;
+			for (int i = 0; i < size.size(); i++) {
+				cout << "[" << size[i] << "]";
+			}
+			cout << endl;
+		}
+		else {
+			printf("VAR    %s\n", n->name);
+		}
 	}
 	catch (exception e) {
 		printf(e.what());
@@ -369,6 +383,5 @@ bool hasID(string name) {
 }
 
 IDNode* getID(string name) {
-	cout << name << endl;
 	return idMap.find(name);
 }
