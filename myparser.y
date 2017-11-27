@@ -223,16 +223,21 @@ var     : ID {
 			 }
         //| '*' var %prec '!' {}
         | var '[' INTEGER ']' {
-								//把每一维空间大小压入进去
-								IDNode* idNode = (IDNode*)$1;//先转换成IDNode*
-								if(idNode->getValue()==nullptr){
-									ArrayNode* arrNode = new ArrayNode();
-									idNode->setValue(arrNode);
+								if(isDefining()){//声明语句
+									//把每一维空间大小压入进去
+									IDNode* idNode = (IDNode*)$1;//先转换成IDNode*
+									if(idNode->getValue()==nullptr){//如果没有初始化成员变量ValueNode就先初始化
+										ArrayNode* arrNode = new ArrayNode();
+										idNode->setValue(arrNode);
+									}
+									ArrayNode* arrNodeInUsed = (ArrayNode*)(idNode->getValue());
+									arrNodeInUsed->addSize($3->value);//压入当前维度的空间大小
+									vector<int>k = arrNodeInUsed->getSize();
+									$$ = (ValueNode*)idNode;//给$$赋值
 								}
-								ArrayNode* arrNodeInUsed = (ArrayNode*)(idNode->getValue());
-								arrNodeInUsed->addSize($3->value);//压入当前维度的空间大小
-								vector<int>k = arrNodeInUsed->getSize();
-								$$ = (ValueNode*)idNode;//给$$赋值
+								else {//赋值语句
+									
+								}
 							  }
         | var '[' ']' {}
         | '(' var ')' { $$ = $2; }

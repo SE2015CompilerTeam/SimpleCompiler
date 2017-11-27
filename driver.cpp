@@ -161,7 +161,7 @@ void IDNode::printNode(Node* n) {
 			cout << endl;
 		}
 		else {
-			printf("VAR    %s\n", n->name);
+			cout << n->name << endl;
 		}
 	}
 	catch (exception e) {
