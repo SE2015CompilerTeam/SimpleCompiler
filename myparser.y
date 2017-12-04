@@ -3,10 +3,11 @@
 #include <fstream>
 #include <stdio.h>
 #include "mylexer.h"
-#include "driver.h"
+#include "inc/driver.h"
 #include "myparser.h"
+
 extern int yylex();
-extern void yyerror(const char* msg);
+//extern void yyerror(const char* msg);
 extern int yylineno;
 extern int lineno;
 //extern char* yytext;
@@ -75,13 +76,19 @@ using namespace std;
 %type <value_n> expr expritem
 %type <nodes> types
 %type <nodes> initlist // 这个该是啥type呢。。
-%type <value_n> vals var varexpr
+%type <id_n>    var
+%type <value_n> vals varexpr
 %type <nodes> ids  exprlist
 
 %start program
 %%
-program : INT MAIN '(' ')' block {Node::printTree($5, 0);} // TODO: main args
+program : block {Node::printTree($1, 0);}
+        | program block {Node::printTree($2, 0);}
         ;
+    /*INT MAIN '(' ')' block {
+                Node::printTree($5, 0);
+                } // TODO: main args
+        ;*/
 types: INT  {$$ = $1; printf("types INT\n"); setTypes(Value_Type::type_int); setStatus(true);}
      | DOUBLE   {$$ = $1; setTypes(Value_Type::type_double); setStatus(true);}
      | FLOAT    {$$ = $1; setTypes(Value_Type::type_double); setStatus(true);}
@@ -244,7 +251,7 @@ expr    : '(' expr ')' {    $$ = $2;
         | expr AND expr {   $$ = new ExprNode("&&", $1, $3);
                             $$->addChildren($1);  $$->addChildren($3);
          }
-        | PP expr  %prec RA{//$$ = $2;
+        /*| PP expr  %prec RA{//$$ = $2;
                             
                             $$ = new ExprNode("+++", $2, nullptr);
                             $$->addChildren($2);
@@ -252,17 +259,22 @@ expr    : '(' expr ')' {    $$ = $2;
         | MM expr  %prec RA{
                             $$ = new ExprNode("---", $2, nullptr);
                             $$->addChildren($2);
-                        }
-        | '-' expr %prec '*' {
+                        }*/
+        | '-' expr %prec '!' {
                             $$ = new ExprNode("-", $2, nullptr);
+                            $$->addChildren($2);}
+        | '+' expr %prec '!' {
+                            $$ = new ExprNode("+", $2, nullptr);
                             $$->addChildren($2);}
         | expr PP{      
                         $$ = new ExprNode("++", $1, nullptr);
+                        updateIDInMap($1);
                         $$->addChildren($1);
                        // printf("expr PP\n");
                     }
         | expr MM{      
-                        $$ = new ExprNode("++", $1, nullptr);
+                        $$ = new ExprNode("--", $1, nullptr);
+                        updateIDInMap($1);
                         $$->addChildren($1);
                     }
         | '!' expr {    
@@ -275,10 +287,10 @@ expr    : '(' expr ')' {    $$ = $2;
         }
         | vals  {
                     $$ = $1;
-                 //   $$ = new ValueNode("1234");
         }
-        //| var   {$$ = $1;printf("expr ID \n");}
-        | varexpr {$$ = $1;}
+        | varexpr {$$ = $1;
+                    
+                }
         //| MUL expr %prec UDEREF { }
         //| BITAND expr %prec UREF { }
         //| expr LBRACK expr RBRACK %prec SUB {}
@@ -293,32 +305,39 @@ ids     : varexpr {
                     }
         ;
 varexpr : var { 
-                    IDNode* symbol = handleVarExpr((IDNode*)$1);
-                    if(symbol == nullptr){
-                        $$ = new ValueNode("ERROR NODE");
-                    }else{
-                        $$ = symbol;
-                    }
-                    
-                    }
-        | var '=' expritem { 
+                    $$ = ExprNode::handleVarExpr((IDNode*)$1);// 找到了,赋:值、类型、行号否则不变
+                    /*if($$->getValueType() == Value_Type::type_default){
+                       // cout << "变量"<< $1->getName()<<"重定义, line: "<<$1->getLineNum()<<endl;
+                        yyerror(std::strcat("未定义的标识符 ", $1->getName()));                    }// 怎么检测重定义呢*/
+               }
+        | var '=' expritem {                  
                             // 检查重(未)定义, 返回找到的结果(未找到时插入符号表并返回传入参数)
-                          //  setAssign(true);
-                            IDNode* symbol = handleVarExpr((IDNode*)$1);
-                            if(symbol == nullptr){
-                                $$ = new ValueNode("ERROR NODE");    
+                            if(isDefining()){
+                                if($1->getValueType() == Value_Type::type_default){
+                                    // 正在定义尚未定义的变量,没毛病
+                                    setIDType($1); // 先设上全局的变量类型
+                                    //$1->setValue($3);
+                                    addID($1->getName(), $1);
+                                }else{
+                                    // $1已经含有变量类型了,证明先前已被定义过
+                                    fprintf(stderr, "重定义变量：'%s' at line: %d\n", $1->getName(), (getID($1->getName()))->getLineNum());
+                                    //yyerror(std::strcat("重定义的变量: ",$1->getName()));
+                                 }
+                            }else{
+                                // 正在赋值,要检查左边是否被定义并赋值过
+                                if($1->getValueType() == Value_Type::type_default){
+                                    fprintf(stderr, "未定义的标识符: %s",$1->getName() );
+                                   // yyerror(std::strcat("未定义的标识符 ",$1->getName()));
+                                }
                             }
-                            else{
-                                IDNode* idNode = (IDNode*)$1;
-                                $$ = new ExprNode("=", symbol, $3);
-                                $$->addChildren(symbol);  $$->addChildren($3);
-                            }
-                             // $3 也可能未定义或未初始化，交给计算函数处理   
+                            // 从符号表里拿并设值
+                            $$ = new ExprNode("=", $1, $3); // 赋值并建立节点
+                            updateIDInMap($1);
+                            $$->addChildren($1); $$->addChildren($3); 
                         }
         ;
 var     : ID {
                 $$ = $1;
-               
              }
         | var '[' INTEGER ']' {
                                 if(isDefining()){//声明语句
@@ -339,11 +358,24 @@ var     : ID {
                               }
         | var '[' ']' {}
         | '(' var ')' { $$ = $2; }
+        | PP var  %prec RA{
+                            ExprNode::handleVarExpr((IDNode*)$2); // 载入符号表内的值
+                            ExprNode* temp = new ExprNode("+++", $2, nullptr);
+                            updateIDInMap($2); // 更新后重新插入
+                            $$ = $2;
+                            $$->addBrother(temp);
+                        }
+        | MM var  %prec RA{
+                            ExprNode::handleVarExpr((IDNode*)$2);
+                            ExprNode* temp = new ExprNode("---", $2, nullptr);
+                            $$ = $2;
+                            updateIDInMap($$);
+                            $$->addBrother(temp);
+                        }
         ;
-def_stmt: types ids  { 
-                        //Node *nodes[] = {new Node("Def_Stmt"), $1, $2};
-                        //$$ = Node::createNode(new Node("Def_Stmt"), new Node("TEST"));
+def_stmt: types ids  {  
                         setStatus(false);
+                        Node::checkDefTree($2, (TypeNode*)$1);
                         $$ = Node::createNode(3, new Node("Def_Stmt"), $1, $2);
                      }
         ;
