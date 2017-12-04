@@ -318,6 +318,9 @@ varexpr : var {
                                     setIDType($1); // 先设上全局的变量类型
                                     //$1->setValue($3);
                                     addID($1->getName(), $1);
+                                    $$ = new ExprNode("=", $1, $3);
+                                    updateIDInMap($1);
+                                    $$->addChildren($1); $$->addChildren($3); 
                                 }else{
                                     // $1已经含有变量类型了,证明先前已被定义过
                                     fprintf(stderr, "重定义变量：'%s' at line: %d\n", $1->getName(), (getID($1->getName()))->getLineNum());
@@ -325,15 +328,15 @@ varexpr : var {
                                  }
                             }else{
                                 // 正在赋值,要检查左边是否被定义并赋值过
-                                if($1->getValueType() == Value_Type::type_default){
-                                    fprintf(stderr, "未定义的标识符: %s",$1->getName() );
+                                IDNode* target = ExprNode::handleVarExpr((IDNode*)$1);
+                                if(target->getValueType() == Value_Type::type_default){
+                                    fprintf(stderr, "未定义的标识符: %s\n",target->getName() );
                                    // yyerror(std::strcat("未定义的标识符 ",$1->getName()));
                                 }
+                                $$ = new ExprNode("=", target, $3);
+                                updateIDInMap(target);
+                                $$->addChildren(target); $$->addChildren($3); 
                             }
-                            // 从符号表里拿并设值
-                            $$ = new ExprNode("=", $1, $3); // 赋值并建立节点
-                            updateIDInMap($1);
-                            $$->addChildren($1); $$->addChildren($3); 
                         }
         ;
 var     : ID {
