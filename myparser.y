@@ -82,13 +82,13 @@ using namespace std;
 
 %start program
 %%
-program : block {Node::printTree($1, 0);}
+program : /*block {Node::printTree($1, 0);}
         | program block {Node::printTree($2, 0);}
-        ;
-    /*INT MAIN '(' ')' block {
-                Node::printTree($5, 0);
-                } // TODO: main args
         ;*/
+        INT MAIN '(' ')' block {
+            Node::printTree($5, 0);
+         } // TODO: main args
+        ;
 types: INT  {$$ = $1; printf("types INT\n"); setTypes(Value_Type::type_int); setStatus(true);}
      | DOUBLE   {$$ = $1; setTypes(Value_Type::type_double); setStatus(true);}
      | FLOAT    {$$ = $1; setTypes(Value_Type::type_double); setStatus(true);}
