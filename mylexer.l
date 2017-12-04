@@ -2,7 +2,7 @@
 #pragma warning( disable : 4996)
 #include "mylexer.h"
 #include "myparser.h"
-#include "driver.h"
+#include "inc/driver.h"
 #include <map>
 #include <stdlib.h>
 
@@ -161,9 +161,7 @@ kexue    ({integer}|{double})[e]{integer}
 {id}        {
                 char *name = new char[LEN];
                 strcpy_s(name,LEN+1,yytext);
-                int i = 10;
-                i++;
-                yylval.id_n = new IDNode(name, Value_Type::type_int, yylineno);
+                yylval.id_n = new IDNode(name, yylineno);
                // addID(name, yylval.id_n);
                 return ID;
             }
