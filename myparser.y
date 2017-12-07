@@ -89,7 +89,7 @@ program : /*block {Node::printTree($1, 0);}
             Node::printTree($5, 0);
          } // TODO: main args
         ;
-types: INT  {$$ = $1; printf("types INT\n"); setTypes(Value_Type::type_int); setStatus(true);}
+types: INT  {$$ = $1;setTypes(Value_Type::type_int); setStatus(true);}
      | DOUBLE   {$$ = $1; setTypes(Value_Type::type_double); setStatus(true);}
      | FLOAT    {$$ = $1; setTypes(Value_Type::type_double); setStatus(true);}
      | CHAR {$$ = $1; setTypes(Value_Type::type_char); setStatus(true);}
@@ -390,7 +390,7 @@ if_stmt      : IF '(' cond_args ')' stmt {
         | IF '(' cond_args ')' stmt ELSE stmt { 
                     Node *cond = Node::createNode(new Node("IF Condition"), $3);
                     Node *ifbody = Node::createNode(new Node("IF Body"), $5);
-                    Node *elsebody = Node::createNode(new Node("ELSE Body"), $7);
+                    Node *elsebody = Node::createNode(new Node("ELSE"), $7);
                     $$ = Node::createNode(4, new Node("IF"), cond, ifbody, elsebody);
                  }
         //| expr '?' stmt ':' stmt {} put it in expr
@@ -438,8 +438,8 @@ int main(void)
     int n = 1;
     mylexer lexer;
     myparser parser;
-    //freopen("d:\\read.txt", "r", stdin);
-    //freopen("d:\\out.txt", "w", stdout);
+    //freopen("e:\\read.txt", "r", stdin);
+    freopen("e:\\out.txt", "w", stdout);
     if (parser.yycreate(&lexer)) {
         if (lexer.yycreate(&parser)) {
             n = parser.yyparse();

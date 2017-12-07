@@ -180,6 +180,9 @@ public:
 	CharNode(char val) : ValueNode(std::to_string(val).c_str(), Value_Type::type_char) {
 		this->tvalue = val;
 	}
+	CharNode(CharNode &n) :ValueNode(std::to_string((char)n.getValue()).c_str(), Value_Type::type_char){
+		this->tvalue = (char)n.getValue();
+	}
 };
 
 class DoubleNode : public ValueNode {
@@ -187,6 +190,9 @@ public:
 	double tvalue;
 	DoubleNode(double value) :ValueNode(std::to_string(value).c_str(), Value_Type::type_double) { // 只有double类型需要再将字符串转为浮点数
 		this->tvalue = value;
+	}
+	DoubleNode(DoubleNode& n) :ValueNode(std::to_string((double)n.tvalue).c_str(), Value_Type::type_double) { // 只有double类型需要再将字符串转为浮点数
+		this->tvalue = (double)n.tvalue;
 	}
 	double getValue(){ return this->tvalue; }
 };
@@ -198,6 +204,9 @@ public:
 	FloatNode(float val) :ValueNode(std::to_string(val).c_str(), Value_Type::type_float) { // 只有double类型需要再将字符串转为浮点数
 		this->tvalue = val;
 	}
+	FloatNode(FloatNode& n) :ValueNode(std::to_string((float)n.tvalue).c_str(), Value_Type::type_float) { // 只有double类型需要再将字符串转为浮点数
+		this->tvalue = (float)n.tvalue;
+	}
 };
 
 class IntNode :public ValueNode{
@@ -206,6 +215,9 @@ public:
 	int getValue(){ return this->tvalue; }
 	IntNode(int val) :ValueNode(std::to_string(val).c_str(), Value_Type::type_int) {
 		this->tvalue = val;
+	}
+	IntNode(IntNode &n) :ValueNode(std::to_string((int)n.tvalue).c_str(), Value_Type::type_int){
+		this->tvalue = (int)n.tvalue;
 	}
 };
 

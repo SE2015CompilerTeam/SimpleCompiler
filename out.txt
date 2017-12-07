@@ -1,0 +1,156 @@
+Block
+    Stmts
+        Def_Stmt
+            TYPE      INT
+            ID List
+                EXPR      =    1
+                    VAR       a
+                    Value     1
+                EXPR      =    1
+                    VAR       b
+                    VAR       a
+                VAR       _
+                EXPR      =    0
+                    VAR       _1
+                    Value     0
+                EXPR      =    0
+                    VAR       _2
+                    Value     0
+                EXPR      =    0
+                    VAR       _3
+                    Value     0
+        Expr List
+            EXPR      =    22
+                VAR       _
+                Value     22
+        Def_Stmt
+            TYPE      INT
+            ID List
+                EXPR      =    1
+                    VAR       d
+                    Value     1
+                EXPR      =    1
+                    VAR       e
+                    Value     1
+                EXPR      =    1
+                    VAR       f
+                    VAR       d
+        Def_Stmt
+            TYPE      CHAR
+            ID List
+                EXPR      =    99
+                    VAR       c
+                    Value     99
+        IF
+            IF Condition
+                EXPR      =    1
+                    VAR       c
+                    Value     1
+            IF Body
+                Block
+                    Stmts
+                        Expr List
+                            EXPR      =    22
+                                VAR       c
+                                EXPR      -    22
+                                    EXPR      +    23
+                                        VAR       _
+                                        EXPR      *    1
+                                            VAR       c
+                                            VAR       c
+                                    EXPR      /    1
+                                        VAR       c
+                                        VAR       c
+                        Expr List
+                            EXPR      =    1
+                                VAR       a
+                                EXPR      <=    1
+                                    EXPR      >=    1
+                                        VAR       b
+                                        VAR       a
+                                    EXPR      ==    1
+                                        VAR       a
+                                        VAR       a
+                        WHILE
+                            While Condition
+                                EXPR      >=    1
+                                    VAR       a
+                                    Value     1
+                            While body
+                                Expr List
+                                    EXPR      *=    2
+                                        VAR       a
+                                        Value     2
+                        FOR
+                            FOR args1
+                                Def_Stmt
+                                    TYPE      INT
+                                    ID List
+                                        EXPR      =    -1
+                                            VAR       w
+                                            Value     -1
+                            FOR args2
+                                EXPR      <    1
+                                    VAR       w
+                                    Value     10
+                            FOR arg3
+                                EXPR      ++    -1
+                                    VAR       w
+                            FOR body
+                                Block
+                                    Stmts
+                                        Expr List
+                                            EXPR      =    1
+                                                VAR       a
+                                                EXPR      -    1
+                                                    VAR       a
+                                                    EXPR      &    0
+                                                        EXPR      %    4
+                                                            EXPR      *    10
+                                                                VAR       a
+                                                                Value     10
+                                                            Value     6
+                                                        Value     2
+                                        Expr List
+                                            EXPR      |=    3
+                                                VAR       b
+                                                Value     2
+            ELSE Body
+                IF
+                    If Condition
+                        EXPR      !=    1
+                            VAR       c
+                            Value     1
+                    If Body
+                        IF
+                            If Condition
+                                EXPR      >    1
+                                    VAR       c
+                                    Value     1
+                            If Body
+                                Expr List
+                                    EXPR      >=    1
+                                        VAR       _1
+                                        VAR       _2
+        Block
+            Stmts
+                Block
+                    Stmts
+                        Expr List
+                            EXPR      =    1
+                                VAR       c
+                                EXPR      <=    1
+                                    EXPR      -    0
+                                        EXPR      -    3
+                                            EXPR      +    3
+                                                Value     1
+                                                Value     2
+                                            EXPR      *    0
+                                                EXPR      /    0
+                                                    Value     3
+                                                    Value     4
+                                                Value     5
+                                        Value     3
+                                    Value     4
+        Value     read(1)
+        Value     write(1)

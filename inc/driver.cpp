@@ -289,15 +289,84 @@ ValueNode* IDNode::setValue(ValueNode* n){ // ÏÈ²»×öÀàĞÍ¼ì²é(¿ÉÒÔÓÃÓÒÖµ¼ì²é×óÖµ£
 		if (this->tvalue != nullptr)
 			delete this->tvalue; // ÏÈÇå³ıÔ­À´±£ÁôµÄValue
 		ValueNode* v = ValueNode::extractInterValue(n);
+		char *type; 
+		switch (v->getValueType())
+		{
+		case Value_Type::type_char:		type = "char";		break;
+		case Value_Type::type_int:		type = "int";		break;
+		case Value_Type::type_float:	type = "float";		break;
+		case Value_Type::type_double:	type = "double";	break;
+		default:						type = "other";		break;
+		}
 		switch (this->value_type)
 		{
-		case Value_Type::type_char: 	this->tvalue = new CharNode(*(CharNode*)v);		break;
-		case Value_Type::type_int:		this->tvalue = new IntNode(*(IntNode*)v);		break;
-		case Value_Type::type_float:	this->tvalue = new FloatNode(*(FloatNode*)v);	break;
-		case Value_Type::type_double:	this->tvalue = new DoubleNode(*(DoubleNode*)v);	break;
-		case Value_Type::type_string:	this->tvalue = new StringNode(*(StringNode*)v);	break;
-		case Value_Type::type_pointer:	this->tvalue = new StringNode(*(StringNode*)v);	break;
-		case Value_Type::type_array:	this->tvalue = n;								break;
+		case Value_Type::type_char: 	
+			switch (v->getValueType())
+			{
+				case Value_Type::type_char:		this->tvalue = new CharNode(((CharNode*)v)->getValue());	break;
+				case Value_Type::type_int:		this->tvalue = new CharNode(((IntNode*)v)->getValue());		break;
+				case Value_Type::type_float:	this->tvalue = new CharNode(((FloatNode*)v)->getValue());	break;
+				case Value_Type::type_double:	this->tvalue = new CharNode(((DoubleNode*)v)->getValue());	break;
+				//case Value_Type::type_pointer:	this->tvalue = new CharNode(*(StringNode*)v);	break;
+				default:
+					fprintf(stderr, "²»Ö§³ÖµÄÀàĞÍ×ª»»,´Ó %s µ½ char\n", type);
+					break;
+			}
+			break;
+		case Value_Type::type_int:		
+			switch (v->getValueType())
+			{
+			case Value_Type::type_char:		this->tvalue = new IntNode(((CharNode*)v)->getValue());	break;
+			case Value_Type::type_int:		this->tvalue = new IntNode(((IntNode*)v)->getValue());		break;
+			case Value_Type::type_float:	this->tvalue = new IntNode(((FloatNode*)v)->getValue());	break;
+			case Value_Type::type_double:	this->tvalue = new IntNode(((DoubleNode*)v)->getValue());	break;
+				//case Value_Type::type_pointer:	this->tvalue = new CharNode(*(StringNode*)v);	break;
+			default:
+				fprintf(stderr, "²»Ö§³ÖµÄÀàĞÍ×ª»»,´Ó %s µ½ double\n", type);
+				break;
+			}
+			break;
+		case Value_Type::type_float:	
+			switch (v->getValueType())
+			{
+			case Value_Type::type_char:		this->tvalue = new FloatNode(((CharNode*)v)->getValue());	break;
+			case Value_Type::type_int:		this->tvalue = new FloatNode(((IntNode*)v)->getValue());		break;
+			case Value_Type::type_float:	this->tvalue = new FloatNode(((FloatNode*)v)->getValue());	break;
+			case Value_Type::type_double:	this->tvalue = new FloatNode(((DoubleNode*)v)->getValue());	break;
+				//case Value_Type::type_pointer:	this->tvalue = new CharNode(*(StringNode*)v);	break;
+			default:
+				fprintf(stderr, "²»Ö§³ÖµÄÀàĞÍ×ª»»,´Ó %s µ½ float\n", type);
+				break;
+			}
+			break;
+		case Value_Type::type_double:	
+			switch (v->getValueType())
+			{
+			case Value_Type::type_char:		this->tvalue = new DoubleNode(((CharNode*)v)->getValue());	break;
+			case Value_Type::type_int:		this->tvalue = new DoubleNode(((IntNode*)v)->getValue());		break;
+			case Value_Type::type_float:	this->tvalue = new DoubleNode(((FloatNode*)v)->getValue());	break;
+			case Value_Type::type_double:	this->tvalue = new DoubleNode(((DoubleNode*)v)->getValue());	break;
+				//case Value_Type::type_pointer:	this->tvalue = new CharNode(*(StringNode*)v);	break;
+			default:
+				fprintf(stderr, "²»Ö§³ÖµÄÀàĞÍ×ª»»,´Ó %s µ½ double\n", type);
+				break;
+			}
+			break;
+		case Value_Type::type_string:	
+			switch (v->getValueType())
+			{
+			case Value_Type::type_char:		this->tvalue = new StringNode(((CharNode*)v)->getValue());	break;
+			case Value_Type::type_int:		this->tvalue = new StringNode(((IntNode*)v)->getValue());		break;
+			case Value_Type::type_float:	this->tvalue = new StringNode(((FloatNode*)v)->getValue());	break;
+			case Value_Type::type_double:	this->tvalue = new StringNode(((DoubleNode*)v)->getValue());	break;
+				//case Value_Type::type_pointer:	this->tvalue = new CharNode(*(StringNode*)v);	break;
+			default:
+				fprintf(stderr, "²»Ö§³ÖµÄÀàĞÍ×ª»»,´Ó %s µ½ string\n", type);
+				break;
+			}
+			break;
+		//case Value_Type::type_pointer:	this->tvalue = new StringNode(*(StringNode*)v);	break;
+		//case Value_Type::type_array:	this->tvalue = n;								break;
 		default:																		break;
 		}
 		return this;
