@@ -1,15 +1,19 @@
 #ifndef __DRIVER_HPP__
 #define __DRIVER_HPP__ 1
 
-#include <deque>
+#include <queue>
 #include <map>
 #include <iostream>
+#include <fstream>
+#include <sstream>
 #include <iomanip>
 #include <stdarg.h>
 #include <string>
 #include <vector>
 #define LEN 1024
 #define PRTSPC 10
+#define OPTSIZE 3
+#define IDSIZE 4
 using namespace std;
 
 enum Node_Type { node_norm, node_value, node_id, node_opt, node_type, node_array };
@@ -28,13 +32,13 @@ public:
 		type = Node_Type::node_norm;
 	}
 	Node(char name) : Node(name, Node_Type::node_norm) { }
-	Node(char* name) : Node(name, Node_Type::node_norm) { }
+	Node(const char* name) : Node(name, Node_Type::node_norm) { }
 	Node(char name, Node_Type type) {
 		this->name = new char[2];
 		this->name[0] = name; this->name[1] = '\0';
 		this->type = Node_Type::node_norm;
 	}
-	Node(char* name, Node_Type type) {
+	Node(const char* name, Node_Type type) {
 		this->name = new char[std::strlen(name) + 1];
 		strcpy_s(this->name, std::strlen(name) + 1, name);
 		this->type = type;
@@ -64,12 +68,13 @@ class ValueNode : public Node{ // 存储Value类型节点
 protected:
 	char* value;
 	Value_Type value_type;
+	bool runtime = false; // 是否在运行时刻赋值 
 public:
 	ValueNode() :Node("Value", Node_Type::node_value){
 		this->value_type = Value_Type::type_int;
 	}
 	// 连值都不传 怎么可能再传值类型
-	ValueNode(char* name) :Node(name, Node_Type::node_value){
+	ValueNode(const char* name) :Node(name, Node_Type::node_value){
 		this->value = "";
 		this->value_type = Value_Type::type_int;
 	}
@@ -78,7 +83,7 @@ public:
 		this->value = new char[std::strlen(value) + 1];
 		strcpy_s(this->value, std::strlen(value) + 1, value);
 	}
-	ValueNode(const char* value, char* name, Value_Type value_type = Value_Type::type_int) :Node(name, Node_Type::node_value){
+	ValueNode(const char* value, const char* name, Value_Type value_type = Value_Type::type_int) :Node(name, Node_Type::node_value){
 		this->value_type = value_type;
 		this->value = new char[std::strlen(value) + 1];
 		strcpy_s(this->value, std::strlen(value) + 1, value);
@@ -88,6 +93,8 @@ public:
 		this->value = new char[std::strlen(value) + 1];
 		strcpy_s(this->value, std::strlen(value) + 1, value);
 	}
+	bool isRuntime(){ return runtime; }
+	void setRuntime(bool runtime){ this->runtime = runtime; }
 	void setValueType(Value_Type type){ this->value_type = type; }
 	void setValue(const char* val, Value_Type type);
 	Value_Type getValueType(){ return this->value_type; }
@@ -99,8 +106,12 @@ public:
 	static bool checkValueType(char* opt, ValueNode* t1, ValueNode* t2);
 	static bool checkValid(ValueNode* node);
 	static ValueNode* extractInterValue(ValueNode* n);
-	static ValueNode* ErrorNode(){
-		return new ValueNode("Error Node");
+	static int isTrue(ValueNode* value);
+	static ValueNode* ErrorNode(bool isRuntime = false, Value_Type type = Value_Type::type_int){
+		const char* c = isRuntime ? "" : "Error Node";
+		ValueNode* err = new ValueNode(c, "", type);
+		err->setRuntime(isRuntime);
+		return err;
 	}
 };
 
@@ -108,18 +119,18 @@ public:
 class IDNode : public ValueNode{ // ID的类型定义好后就不会再变,故可直接继承
 	int linenum;
 	ValueNode *tvalue = nullptr;
+	
 	//int autoFlag = 0; // 后缀++ 的标志位
 	//void updateValue();
 public:
-	IDNode(char* name, int linenum = 1, Value_Type type = Value_Type::type_default) : ValueNode("", name, type){
+	IDNode(const char* name, int linenum = 1, Value_Type type = Value_Type::type_default) : ValueNode("", name, type){
 		this->linenum = linenum;
 		this->type = Node_Type::node_id;
-		//autoFlag = 0;
-		//临时加的 之后要检查符号表 TODO:
-		//this->value = new IntNode(999);
 	}
+	
 	static IDNode* cp(IDNode* src);
 	static void cp(IDNode* target, IDNode* src);
+	static string genVarName();
 	int getLineNum();
 	void setLineNum(int no);
 	//void setAutoFlag(bool needIncre);
@@ -144,9 +155,10 @@ public:
 	}
 	Value_Type getTypeType(){ return this->type_type; }
 	static void printNode(Node* node);
+	static string typeName(Value_Type type);
 };
 
-
+//void pushTAC(const char* opt, ValueNode* arg1, ValueNode* arg2, ValueNode* result);
 class ExprNode : public ValueNode{
 private:
 	ValueNode *tvalue = nullptr; // 保存表达式的值(根据type强制转化成各种类型)
@@ -155,7 +167,8 @@ public:
 	ExprNode(char* name, ValueNode* n1, ValueNode* n2 = nullptr) :ValueNode(){ // 表达式运算符 操作数1 操作数2（optional）
 		this->name = name;
 		this->type = Node_Type::node_opt;
-		setValue(ExprNode::calculate(name, n1, n2));
+		ValueNode* res = ExprNode::calculate(name, n1, n2);
+		setValue(res);
 	}
 	ExprNode(ValueNode* n) :ValueNode(*n){
 		setValue(n);
@@ -166,6 +179,7 @@ public:
 	void setNot();
 	void autoIncre(int type = 0); // 0: ++a 1: --a 2: a++ 3: a--
 	static void assign(IDNode* target, ValueNode* src);
+	static Value_Type chooseValueType(ValueNode *n1, ValueNode* n2);
 	static ValueNode* calculate(const char* name, ValueNode* n1, ValueNode* n2);
 	static ValueNode* calcSimpleOpt(const char* name, ValueNode* n1, ValueNode* n2); // 计算非组合运算符
 	static ValueNode* calcBoolOpt(const char* type, ValueNode* n1, ValueNode *n2);
@@ -264,6 +278,7 @@ public:
 	bool hasDefined(IDNode*);
 	void insert(std::string name, IDNode* symbol);
 	void updateSymbol(IDNode* src);
+	std::map<std::string, IDNode> getMap(){ return Map; }
 private:
 	std::map<std::string, IDNode> Map;
 };
@@ -281,6 +296,42 @@ private:
 	std::deque<SymbolMap> MapStack;
 };
 
+class TAC{
+	string opt;
+	/*ValueNode* arg1;
+	ValueNode* arg2;
+	ValueNode* result;*/
+	string arg1;
+	string arg2;
+	string result;
+public:
+	TAC(const string o, string v1, string v2, string res){
+		opt = o;
+		arg1 = v1 ;
+		arg2 = v2 ;
+		result = res ;
+	}
+	TAC(const string o, string v1, string v2){// 有时候并不能马上知道结果
+		opt = o;
+		arg1 = v1;
+		arg2 = v2;
+		result = nullptr; // 这绝对是个废话..
+	}
+	void setResult(string res){ 
+		result = res;
+	}
+	void printSelf();
+	static void printTitle(); 
+	static const char* genVarName();
+};
+
+class CodeGenerator{
+	static string readLine(string line, char delim);
+public:
+	static void readFile(string read_from, string write_to);
+	static void initVar(SymbolMap &map);
+};
+
 class myOptFault :public exception
 {
 public:
@@ -292,14 +343,14 @@ void checkNodeType(Node* n, Node_Type type);
 bool isSimpleOpt(const char* name);
 IDNode* handleVarExpr(IDNode* node);
 //在lex中调用，不设置IDNode类型
-void addID(char* chrName, IDNode* sym, int index = 0);
+void addID(string chrName, IDNode* sym, int index = 0);
 //在yacc匹配types中调用，设置当前声明语句的变量类型
 void setTypes(Value_Type tp);
 //在声明语句中调用，设置当前ID的Value_Type
 void setIDType(IDNode* node, Value_Type def_type);
 void setIDType(IDNode* node);
 // 更新符号表内符号的值
-void updateIDInMap(ValueNode* src);
+void updateIDInMap(ValueNode* src, int index = 0);
 //传入结点获取到Node*
 void getIDs(std::vector<char*> ids, Node* now);
 //传入IDNode*检测是否重定义
@@ -313,7 +364,14 @@ void setStatus(bool status);
 //获取现在的状态
 bool isDefining();
 //判断符号表内有没有存这个ID
-bool hasID(std::string name);
+bool hasID(std::string name, int index = 0);
+const string insertHead(string head, string src);
 //返回符号表里ID的IDNode
-IDNode* getID(std::string name);
+const string newLabel();
+IDNode* getID(std::string name, int index = 0);
+string newTempID();
+string generateTAC(Node* root); // 递归下降遍历语法树,生成TAC队列
+void pushTAC(string opt, string arg1, string arg2, string result);
+void pushTAC(TAC* tac);
+void printTAC();
 #endif /* END __DRIVER_HPP__ */
