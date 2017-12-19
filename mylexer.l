@@ -94,8 +94,8 @@ kexue    ({integer}|{double})[e]{integer}
 "bool"          {yylval.type_n = new TypeNode();return BOOL;}
 "void"          {yylval.type_n = new TypeNode(Value_Type::type_void);return VOID;} 
                                
-"read"          {yylval.str = new StringNode("read");return READ;}
-"write"         {yylval.str = new StringNode("write");return WRITE;}
+"read"          {yylval.nodes = new Node("READ");return READ;}
+"write"         {yylval.nodes = new Node("WRITE");return WRITE;}
 "++"       {return PP;}
 "--"       {return MM;}
 "->"       {return RA;}
