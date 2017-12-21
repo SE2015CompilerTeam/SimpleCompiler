@@ -10,7 +10,8 @@ bool defining = false;
 queue<TAC*> *TACList = new queue<TAC*>();
 int num_of_var = 1;
 int label_num = 1;
-
+vector<string> incre_queue;
+vector<string> decre_queue;
 static const char* ErrorMSG[] = {
 	"Ö»ÄÜ¼ÆËã·Ç×éºÏÔËËã·û",
 	"²»Ö§³ÖµÄ²Ù×÷ÊıÀàĞÍ",
@@ -55,8 +56,6 @@ void checkNodeType(Node* n, Node_Type type) {
 		cout << endl << "ÀàĞÍ²»Æ¥Åä°¡Õâ»¹ÍæÃ«°¡" << endl << endl;
 	//throw new exception("½ÚµãÀàĞÍ²»Æ¥Åä£¨Node => %d£©", type);
 }
-
-
 
 Node* Node::createNode(int num, Node* nodes[]) {
 	Node* root = NULL;
@@ -232,6 +231,21 @@ void IDNode::cp(IDNode* target, IDNode* src){ // ³ıÁË²»¸³Öµº¢×ÓºÍĞÖµÜ£¨·ñÔòÎÒ¾ÍÓ
 		target->setValue(src->getValue());
 		target->setRuntime(src->isRuntime());
 	}
+}
+IDNode* IDNode::newTempID(ValueNode* value){
+	IDNode *tempID;
+	value = ExprNode::extractInterValue(value);
+	if (value != nullptr){ // ÏÈÔÚÁÙÊ±±äÁ¿±íÀïÕÒÖµºÍÀàĞÍÏàÍ¬µÄ±äÁ¿
+		//if ((tempID = Maps[1].findTempID(value)) == nullptr){ // Ã»ÕÒµ½
+			tempID = new IDNode(genVarName().c_str(), -1, value->getValueType());
+			tempID->setValue(value);
+			return tempID;
+		/*}
+		else{
+			return tempID; // ´ÓÁÙÊ±±äÁ¿±íÀïÄÃ
+		}*/
+	}
+	return nullptr;
 }
 
 int IDNode::getLineNum(){
@@ -425,6 +439,7 @@ ValueNode* ExprNode::setValue(ValueNode* node){
 		return nullptr;
 	}
 }
+
 Value_Type ExprNode::chooseValueType(ValueNode *n1, ValueNode* n2){
 	Value_Type v1 = n1->getValueType(), v2 = n2->getValueType();
 	if (v1 == Value_Type::type_double || v2 == Value_Type::type_double)
@@ -789,16 +804,6 @@ void TypeNode::printNode(Node *n){
 		TypeNode* node = (TypeNode*)n;
 		cout << setw(PRTSPC) << "TYPE";
 		cout << TypeNode::typeName(node->type_type) << endl;
-		/*switch (node->type_type)
-		{
-		case Value_Type::type_char:		cout << "CHAR" << endl;		break;
-		case Value_Type::type_int:		cout << "INT" << endl;		break;
-		case Value_Type::type_double:	cout << "DOUBLE" << endl;		break;
-		case Value_Type::type_float:	cout << "FLOAT" << endl;		break;
-		case Value_Type::type_string:	cout << "STRING" << endl;		break;
-		case Value_Type::type_pointer:	cout << "POINTER" << endl;		break;
-		default:	cout << "Un F**king known.Fuck Me.." << endl;		break;
-		}*/
 	}
 }
 
@@ -869,6 +874,26 @@ Node* ArrayNode::getChild(int i) {
 			return child;
 		}
 	}
+}
+
+
+IDNode* SymbolMap::findTempID(ValueNode* tmplt){
+	if (tmplt != nullptr){
+		Value_Type type = tmplt->getValueType();
+		string tmp_value = tmplt->getValue();
+		ValueNode* target;
+		string target_value;
+		for (map<string, IDNode>::iterator it = Map.begin(); it != Map.end(); it++){
+			target = (it->second).getValue();
+			if (target){
+				target_value = target->getValue();
+				if (type == (it->second).getValueType() && tmp_value == target_value){
+					return &(it->second);
+				}
+			}
+		}
+	}
+	return nullptr;
 }
 
 void SymbolMap::insert(string name, IDNode* sym) {
@@ -975,6 +1000,9 @@ string CodeGenerator::readLine(string line, char delim = ' '){
 			word = container.at(0);
 			if (word == "++" || word == "--")
 				head.append(" = ").append(container.at(1)).append(container.at(0)).append(";"); // ºó×ºÔËËã
+			else if (word == "+++" || word == "---"){
+				head.append(" = ").append(word.substr(0, 2)).append(container.at(1)).append(";");
+			}
 			else // Ç°×ºÔËËã
 				head.append(" = ").append(container.at(0)).append(container.at(1)).append(";");
 			return head;
@@ -986,7 +1014,6 @@ string CodeGenerator::readLine(string line, char delim = ' '){
 			return "";
 		}
 	}
-	//else return "";
 }
 
 void CodeGenerator::readFile(string read_from, string write_to){
@@ -1038,6 +1065,9 @@ bool isUndefined(IDNode* node) {
 //ÓÃindexÇø·Ö²»Í¬µÄ×÷ÓÃÓòÏÂµÄ±í,´ıÀ©Õ¹
 void addID(string strName, IDNode* sym, int index) {
 	//string strName = chrName;
+	if (index == 1){
+		int i = 0; i++;
+	}
 	SymbolMap *map = &Maps[index];
 	if (map->find(strName) == nullptr && sym != nullptr) {
 		map->insert(strName, sym);
@@ -1100,20 +1130,19 @@ IDNode* getID(string name, int index) {
 	return cur->find(name);
 }
 
-
-string newTempID(){
-	return IDNode::genVarName(); // ÁÙÊ±±äÁ¿Ãû
-}
-
 string generateTAC(Node* root){
 	if (root == nullptr)
 		return "";
-	Node *child, *left_child,*right_child;
+	Node *child, *left_child,*right_child,*third_child;
 	string temp, left, right;
 	string opt ;
 	switch (root->getNodeType())
 	{
 	case Node_Type::node_id: 
+		right_child = root->getBrother();
+		if (right_child && (right_child->getName() == "+++" || right_child->getName() == "---")){
+			return "";
+		}
 		return ((IDNode*)root)->getName();
 	case Node_Type::node_opt:
 		IDNode* tempVar;
@@ -1121,34 +1150,48 @@ string generateTAC(Node* root){
 		// Expr: µİ¹é×óÓÒ²ÎÊı,ÔÙ°Ñ×Ô¼ºµÄtvalue°ü³ÉID(Éú³É±äÁ¿Ãû)·µ»Ø
 		opt = ((ExprNode*)root)->getName();
 		//child = root->getChildren();
-		left_child = root->getChildren();
-		right_child = left_child->getBrother();
+		
 		interValue = ExprNode::extractInterValue((ValueNode*)root); // ÓĞ¿ÉÄÜÎª¿Õ(run time IDµÄtvalue)
 		//child = child->getBrother();
-		if (right_child != nullptr && right_child->getNodeType() == Node_Type::node_opt){ // ÓÉÓÚÀúÊ·Ô­Òò..Ç°×º×ÔÔö½Úµã¶àÁË¸öid±¾Éí×ö¸ç¸çµÄ½Úµã..ÕâÀï¾ÍÊÇÄÃ×Ô¼ºÈ¡´ú¸ç¸ç
-			string temp_opt = ((ExprNode*)right_child)->getName();
-			if (temp_opt == "+++" || temp_opt == "---"){
+		/*if (right_child != nullptr ){ // ÓÉÓÚÀúÊ·Ô­Òò..Ç°×º×ÔÔö½Úµã¶àÁË¸öid±¾Éí×ö¸ç¸çµÄ½Úµã..ÕâÀï¾ÍÊÇÄÃ×Ô¼ºÈ¡´ú¸ç¸ç
+			if (right_child->getName() == "+++" || right_child->getName() == "---"){
 				left_child = right_child; // ÍµÁº»»Öù..
-				right_child = right_child->getBrother();
+				right_child = right_child->getChildren();
 			}
-		}
+			else{
+				third_child = right_child->getBrother();
+				if (third_child != nullptr && (third_child->getName() == "+++" || third_child->getName() == "---")){
+					right_child = third_child;
+				}
+			}
+		}*/
+		left_child = root->getChildren();
 		left = generateTAC(left_child); // µİ¹éÄÃµ½×óº¢×ÓÁÙÊ±±äÁ¿
+		while (left == "" && left_child != nullptr){ // ÊÇÎÒ×Ô¼º×÷.. 
+			left_child = left_child->getBrother();
+			left = generateTAC(left_child);
+		}
+		right_child = left_child->getBrother();
 		right = generateTAC(right_child);
-		
-		temp = opt == "=" ? "" : newTempID();
+		while (right == "" && right_child != nullptr){
+			right_child = right_child->getBrother();
+			right = generateTAC(right_child);
+		}
 		// ÁÙÊ±±äÁ¿Ãû, ÀàĞÍÎª±í´ïÊ½µÄÀàĞÍ(runtimeÊ±±í´ïÊ½ÀàĞÍÊÇ¹¹³ÉËüµÄIDµÄÀàĞÍ)
-		tempVar = new IDNode(temp.c_str(), -1, ((ValueNode*)root)->getValueType()); // ±äÁ¿ÀàĞÍ
-		tempVar->setValue((ValueNode*)root); // ÁÙÊ±±äÁ¿µÄÖµ¾ÍÊÇµ±Ç°±í´ïÊ½µÄÖµ(runtimeµÄ»°¾ÍÎªnullptr)
-		addID(temp, tempVar, 1); // ¼ÓÈëÁÙÊ±±äÁ¿·ûºÅ±í
+		if (opt != "=" && opt != "+++" && opt != "---"){ // ¸³ÖµºÅ²»ĞèÒªÁÙÊ±±äÁ¿
+			tempVar = IDNode::newTempID((ValueNode*)root);
+			temp = tempVar->getName();
+			addID(temp, tempVar, 1); // ¼ÓÈëÁÙÊ±±äÁ¿·ûºÅ±í
+		}
 		if (right == ""){ // µ¥Ä¿ÔËËã·û
-			/*if (opt == "++" || opt == "--" || opt == "+++" || opt == "---"){
-				pushTAC(opt, left, "", temp);
-			}*/
+			if (opt == "+++" || opt == "---"){
+				temp = left;
+			}
 			pushTAC(opt, left, "", temp);
 			return temp;
 		}
 		else {
-			if (opt.length() > 1 && opt.find("=") >= 1){ // +=, *=..  
+			if (opt.length() > 1 &&(opt != ">=" && opt != "<=") && opt.find("=") >= 1){ // +=, *=..  
 				//pushTAC(opta, left, right, temp);
 				pushTAC(opt.substr(0, 1), left, right, temp);
 				pushTAC("=", temp, "", left);
@@ -1170,6 +1213,7 @@ string generateTAC(Node* root){
 		return temp;
 	case Node_Type::node_norm:
 		opt = root->getName();
+		//clearIncrementQueue();
 		if (opt=="IF"){
 			child = root->getChildren();
 			Node *ifBody = child->getBrother();
@@ -1184,15 +1228,15 @@ string generateTAC(Node* root){
 			//string label_index = newLabel(); // ĞÂ»ù±¾¿é
 			left = generateTAC(child); // ²¼¶û±í´ïÊ½µÄÖµ
 			condNode = getID(left, 1);
-			condition = ExprNode::isTrue(ExprNode::extractInterValue(condNode));
+			/*condition = ExprNode::isTrue(ExprNode::extractInterValue(condNode));
 			if (condition > 0){ // ±í´ïÊ½Îª³£Á¿ ÇÒÎªÕæ   Ö»ÓĞ IF Óï¾ä²ÅÄÜ×öÕâÖÖ¸Ä±ä
 				// ²¼¶û±í´ïÊ½Îª³£Á¿, ¿ÉÖ±½Ó½øĞĞÅĞ¶Ï
 				generateTAC(ifBody);
 			}
 			else if (condition < 0){
 				generateTAC(elseBody);
-			}
-			else{
+			}*/
+			//else{
 				//if (conditio)
 				pushTAC("IFNOT", left, "", IFFalse); // °Ñif »»Îªifnot ºóÃæÌøµ½IF.false ÏÂÃæ¸úIF.true  ¿ÉÊ¡È¥Ò»´Îgoto IF.true
 				//pushTAC(IFTrue, "", "", ""); // label if.true
@@ -1205,7 +1249,7 @@ string generateTAC(Node* root){
 				}
 				pushTAC(outside, "", "", "");
 				
-			}
+		//	}
 			return "";
 		}
 		else if (opt == "WHILE"){
@@ -1298,6 +1342,25 @@ string generateTAC(Node* root){
 		return "";
 	}
 }
+
+void pushIncreID(string name){
+	incre_queue.push_back(name);
+}
+
+void pushDecreID(string name){
+	decre_queue.push_back(name);
+}
+/*
+void clearIncrementQueue(){
+	for (int i = 0; i < incre_queue.size(); i++){
+		pushTAC("+", incre_queue.at(i), "1", incre_queue.at(i));
+	}
+	incre_queue.clear();
+	for (int i = 0; i < decre_queue.size(); i++){
+		pushTAC("-", decre_queue.at(i), "1", decre_queue.at(i));
+	}
+	decre_queue.clear();
+}*/
 
 void pushTAC(string opt, string arg1, string arg2, string result = ""){
 	TAC *tac = new TAC(opt, arg1, arg2, result);

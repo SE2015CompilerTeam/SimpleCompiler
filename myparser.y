@@ -92,7 +92,7 @@ program : /*block {Node::printTree($1, 0);}
             generateTAC($6);
             freopen("e://TAC.txt", "w", stdout);
             printTAC();
-            CodeGenerator::readFile("e://TAC.txt", "e://out_code.txt");
+            CodeGenerator::readFile("e://TAC.txt", "e://out_code.cpp");
          } // TODO: main args
         | program def_stmt ';'{
             freopen("e:\\out.txt", "w", stdout);
@@ -372,17 +372,19 @@ var     : ID {
         | PP var  %prec RA{
                             ExprNode::handleVarExpr((IDNode*)$2); // 载入符号表内的值
                             ExprNode* temp = new ExprNode("+++", $2, nullptr);
-                            //temp->addChildren($2);
+                            temp->addChildren(IDNode::cp($2));
                             updateIDInMap($2); // 更新后重新插入
                             $$ = $2;
-                            temp->addChildren(IDNode::cp($2));// 没意义,只是为了让所有expr都有操作数做孩子
+                            //temp->addChildren(IDNode::cp($2));// 没意义,只是为了让所有expr都有操作数做孩子
                             $$->addBrother(temp);
                         }
         | MM var  %prec RA{
                             ExprNode::handleVarExpr((IDNode*)$2);
                             ExprNode* temp = new ExprNode("---", $2, nullptr);
+                            temp->addChildren(IDNode::cp($2));
                             $$ = $2;
                             updateIDInMap($$);
+                           // temp->addChildren(IDNode::cp($2));
                             $$->addBrother(temp);
                         }
         ;

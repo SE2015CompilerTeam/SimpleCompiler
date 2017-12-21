@@ -126,11 +126,13 @@ public:
 	IDNode(const char* name, int linenum = 1, Value_Type type = Value_Type::type_default) : ValueNode("", name, type){
 		this->linenum = linenum;
 		this->type = Node_Type::node_id;
+		runtime = true;
 	}
 	
 	static IDNode* cp(IDNode* src);
 	static void cp(IDNode* target, IDNode* src);
 	static string genVarName();
+	static IDNode* newTempID(ValueNode* value);
 	int getLineNum();
 	void setLineNum(int no);
 	//void setAutoFlag(bool needIncre);
@@ -279,6 +281,7 @@ public:
 	void insert(std::string name, IDNode* symbol);
 	void updateSymbol(IDNode* src);
 	std::map<std::string, IDNode> getMap(){ return Map; }
+	IDNode* findTempID(ValueNode* tmplt);
 private:
 	std::map<std::string, IDNode> Map;
 };
@@ -368,10 +371,13 @@ bool hasID(std::string name, int index = 0);
 const string insertHead(string head, string src);
 //返回符号表里ID的IDNode
 const string newLabel();
+
 IDNode* getID(std::string name, int index = 0);
-string newTempID();
 string generateTAC(Node* root); // 递归下降遍历语法树,生成TAC队列
 void pushTAC(string opt, string arg1, string arg2, string result);
 void pushTAC(TAC* tac);
 void printTAC();
+void pushIncreID(string name);
+void pushDecreID(string name);
+//void clearIncrementQueue();
 #endif /* END __DRIVER_HPP__ */
