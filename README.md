@@ -6,11 +6,17 @@
 
 # 附录
 ## 支持语法
+
   int var1, var2;
+  
   var1 * var2;
+  
   if()
+  
   for(;;)
+  
   while()
+  
 # Team Member
 * [NKcqx](https://github.com/NKcqx)
 * CocoonYH
